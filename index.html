@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pedidos de sonido y montaje</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@500&display=swap" rel="stylesheet"><!-- taste-skill-ignore: Geist Mono solo para el código del pedido -->
+<style>
+  /* Estilo "achromatic ledger" (taste-skill): la interfaz en tinta y grises sobre un fondo piedra;
+     el único color es el azul de lo que se pide (la maqueta y las cantidades elegidas). */
+  :root{
+    --ground:#f4f3f1; --surface:#ffffff; --raised:#ebeae6; --track:#e6e5e1;
+    --border:#e6e6e6; --rule:#ecebe8; --control:#d4d4d4;
+    --text:#0a0a0a; --muted:#5f5f5f; --faint:#6b6b6b;
+    --primary:#141414; --primary-hover:#2c2c2c; --secondary:#e5e5e5;
+    --hue:#1d5fbf; --hue-ink:#174e9c; --hue-pale:#eef3fb;
+    --positive:#247b50; --pill-positive-bg:#dcfae5; --pill-positive-ink:#04250e;
+    --negative:#c4242a; --pill-negative-bg:#ffedea; --pill-negative-ink:#831c1e;
+    --pill-warning-bg:#fffbeb; --pill-warning-ink:#92400e; --warning-border:#fde68a;
+    --pill-neutral-bg:#eeeeee; --pill-neutral-ink:#3d3d3d;
+    --radius-card:8px; --radius-control:6px; --radius-chip:4px;
+    /* nombres viejos que usa el código */
+    --error:var(--negative); --error-suave:var(--pill-negative-bg); --radio:var(--radius-card);
+    --linea:var(--border); --tinta-3:var(--faint); --fondo:var(--ground);
+  }
+  :root.en-sitio{--ground:#ffffff}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--ground);color:var(--text)}
+  body{font:15px/1.5 "Geist",Inter,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+  .num,.dia b,output{font-variant-numeric:tabular-nums}
+  h1,h2,h3{margin:0;letter-spacing:-.01em;font-weight:600}
+  h1{font-size:24px;line-height:1.2}
+  h2{font-size:20px;line-height:1.25}
+  p{margin:0}
+  button{font:inherit;color:inherit}
+  [hidden]{display:none !important}
+  .solo-lector{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+  :focus-visible{outline:2px solid var(--hue);outline-offset:2px}
+
+  /* Barra superior: nombre del producto y del colegio */
+  .barra-sup{max-width:640px;margin:0 auto;padding:0 16px;height:52px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .producto{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px}
+  .producto svg{width:24px;height:24px;flex:none}
+  .alcance{font-size:14px;color:var(--muted)}
+  .demo{background:var(--pill-warning-bg);color:var(--pill-warning-ink);border-bottom:1px solid var(--warning-border);font-size:13px;text-align:center;padding:6px 16px}
+
+  .app{max-width:640px;margin:0 auto;padding:0 16px}
+  .top{padding:12px 0 16px}
+  .bajada{color:var(--muted);margin-top:4px}
+  .pie{padding:28px 0 32px;color:var(--muted);font-size:14px;text-align:center}
+  .pie a,.contacto a,.nota a{color:var(--text);font-weight:500}
+
+  /* Lista de actos: un panel con filas, la fecha como tipo */
+  .lista{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);overflow:hidden}
+  .evento{display:flex;align-items:center;gap:16px;width:100%;text-align:left;background:var(--surface);border:0;border-top:1px solid var(--rule);padding:12px 16px;cursor:pointer;min-height:68px}
+  .evento:first-child{border-top:0}
+  .evento:hover{background:#fafaf9}
+  .dia{flex:none;width:40px;display:flex;flex-direction:column;align-items:center;line-height:1.1}
+  .dia b{font-size:22px;font-weight:600}
+  .dia small{font-size:12px;color:var(--muted)}
+  .ev-info{flex:1;min-width:0;display:flex;flex-direction:column}
+  .ev-info strong{font-size:16px;font-weight:500;line-height:1.3}
+  .ev-info span{color:var(--muted);font-size:14px}
+  .chev{flex:none;width:18px;height:18px;color:var(--faint)}
+  .vacio{border:1px dashed var(--control);border-radius:var(--radius-card);padding:20px;text-align:center;color:var(--muted)}
+
+  .volver{display:inline-flex;align-items:center;gap:6px;background:none;border:0;padding:8px 0;color:var(--muted);cursor:pointer;min-height:44px;font-size:14px}
+  .volver svg{width:16px;height:16px}
+  .ficha{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);padding:16px 20px;margin-top:16px}
+  .ficha dl{display:grid;grid-template-columns:auto 1fr;gap:10px 20px;margin:0}
+  .ficha dt{color:var(--muted);font-size:14px}
+  .ficha dd{margin:0}
+  .desc{margin-top:14px;padding-top:14px;border-top:1px solid var(--rule);color:var(--text);white-space:pre-line}
+
+  .btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;border-radius:var(--radius-control);border:0;font-weight:500;font-size:16px;cursor:pointer;margin-top:16px}
+  .btn-pri{background:var(--primary);color:#fff}
+  .btn-pri:hover{background:var(--primary-hover)}
+  .btn-pri[disabled]{opacity:.7;cursor:progress}
+  .btn-sec{background:var(--secondary);color:var(--text)}
+  .btn-sec:hover{background:#dcdcdc}
+
+  /* Formulario por pasos */
+  .form-top{position:sticky;top:0;z-index:2;background:var(--ground);padding:4px 0 12px;border-bottom:1px solid var(--border)}
+  .form-top-fila{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .paso-n{font-size:13px;color:var(--muted);margin-top:2px}
+  .progreso{display:flex;gap:4px;margin-top:8px}
+  .progreso i{flex:1;height:4px;border-radius:2px;background:var(--track)}
+  .progreso i.hecho{background:var(--primary)}
+  .paso{padding:20px 0 24px;display:flex;flex-direction:column;gap:22px}
+  .paso>h2:focus{outline:none}
+  .barra-inf{position:sticky;bottom:0;z-index:2;background:var(--ground);border-top:1px solid var(--border);padding:10px 0 calc(12px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px}
+  .barra-inf .botones{display:flex;gap:8px}
+  .barra-inf .btn{margin-top:0}
+  .barra-inf #atras{flex:none;width:auto;padding:0 20px}
+
+  .campo,.pregunta{display:flex;flex-direction:column;gap:8px}
+  .campo>label,.preg-tit{font-weight:500;font-size:14px}
+  .opc{font-weight:400;color:var(--muted)}
+  input[type=text],textarea{font:inherit;font-size:16px;width:100%;padding:10px 12px;border:1px solid var(--control);border-radius:var(--radius-control);background:var(--surface);color:var(--text);min-height:44px}
+  textarea{min-height:96px;resize:vertical}
+  input[type=text]:focus,textarea:focus{outline:none;border-color:var(--hue);box-shadow:0 0 0 3px var(--hue-pale)} /* taste-skill-ignore: anillo de foco, no es una sombra en reposo */
+  ::placeholder{color:var(--faint)}
+  .ayuda{font-size:13px;color:var(--muted)}
+
+  .opciones{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .opciones.una{grid-template-columns:1fr}
+  .opcion{position:relative;display:block}
+  .opcion input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+  .opcion span{display:flex;flex-direction:column;justify-content:center;min-height:48px;height:100%;padding:10px 14px;border:1px solid var(--control);border-radius:var(--radius-control);background:var(--surface);font-weight:500;line-height:1.3}
+  .opcion small{font-weight:400;color:var(--muted);font-size:13px;margin-top:2px}
+  .opcion input:checked+span{border-color:var(--primary);outline:1px solid var(--primary);outline-offset:-2px}
+  .opcion input:focus-visible+span{outline:2px solid var(--hue);outline-offset:2px}
+
+  .sn{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-direction:row}
+  .grupo-sn>.sn~.sn{border-top:1px solid var(--rule);padding-top:10px}
+  .seg{flex:none;display:inline-flex;background:var(--track);border-radius:8px;padding:3px;gap:2px;align-self:flex-start}
+  .sn .seg{align-self:center}
+  .seg label{position:relative;display:block}
+  .seg input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+  .seg span{display:flex;align-items:center;justify-content:center;min-width:64px;min-height:38px;padding:0 14px;border-radius:6px;font-weight:500;font-size:14px;color:var(--muted)}
+  .seg input:checked+span{background:var(--surface);color:var(--text);outline:1px solid var(--border);outline-offset:-1px}
+  .seg input:focus-visible+span{outline:2px solid var(--hue);outline-offset:1px}
+  .grupo-sn{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);padding:10px 16px;display:flex;flex-direction:column;gap:10px}
+  .anidado{border-left:2px solid var(--control);padding-left:14px;display:flex;flex-direction:column;gap:16px}
+
+  .nota{background:var(--raised);color:var(--text);border-radius:var(--radius-card);padding:12px 14px;font-size:14px;line-height:1.5}
+  .nota ul{margin:6px 0;padding-left:20px}
+
+  .equipos{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);overflow:hidden}
+  .equipo{display:flex;align-items:center;gap:12px;padding:10px 16px;border-top:1px solid var(--rule)}
+  .equipo:first-child{border-top:0}
+  .eq-texto{flex:1;min-width:0;display:flex;flex-direction:column}
+  .eq-nombre{font-weight:500;line-height:1.3}
+  .eq-desc{font-size:13px;color:var(--muted)}
+  .paso-ctl{flex:none;display:flex;align-items:center;gap:4px}
+  .paso-ctl button{width:44px;height:44px;border-radius:var(--radius-control);border:1px solid var(--control);background:var(--surface);font-size:20px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .paso-ctl button:hover:not([disabled]){background:#fafaf9}
+  .paso-ctl button[disabled]{opacity:.35;cursor:default}
+  .paso-ctl output{min-width:30px;text-align:center;font-weight:600;font-size:18px;color:var(--faint)}
+  .equipo.activo output{color:var(--hue)}
+  .canales{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+  .canales i{display:inline-block;width:16px;height:6px;border-radius:3px;background:var(--track)}
+  .canales i.usado{background:var(--hue)}
+
+  .adjuntar{background:var(--hue-pale);border:1px dashed var(--hue);border-radius:var(--radius-card);padding:16px;display:flex;flex-direction:column;gap:10px}
+  .adj-tit{font-weight:600;font-size:15px;color:var(--hue-ink)}
+  .btn-adj{position:relative;margin-top:0;background:var(--primary);color:#fff}
+  .btn-adj:hover{background:var(--primary-hover)}
+  .btn-adj:focus-within{outline:2px solid var(--hue);outline-offset:2px}
+  .btn-adj svg{width:18px;height:18px}
+  .archivos{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+  .archivos:empty{display:none}
+  .archivos li{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-control);padding:6px 6px 6px 12px}
+  .arch-nombre{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+  .arch-peso{flex:none;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .quitar{flex:none;min-height:36px;padding:0 10px;border-radius:var(--radius-control);border:0;background:var(--secondary);cursor:pointer;font-size:14px}
+  .aviso{font-size:14px;color:var(--negative)}
+  .aviso:empty{display:none}
+  .contacto{font-size:14px;color:var(--muted);text-align:center}
+
+  .con-error .preg-tit,.con-error>label{color:var(--negative)}
+  .con-error input[type=text],.con-error textarea{border-color:var(--negative)}
+  .con-error .seg{outline:2px solid var(--negative);outline-offset:1px}
+  .con-error .opcion span{border-color:#e6a49c}
+  .err{font-size:14px;color:var(--negative);font-weight:500}
+
+  .trampa{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
+  .msj{border-radius:var(--radius-control);padding:10px 14px;font-size:14px}
+  .msj-error{background:var(--pill-negative-bg);color:var(--pill-negative-ink)}
+  .msj:empty{display:none}
+
+  /* Confirmación */
+  .ok-cab{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:24px}
+  .pill{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border-radius:var(--radius-chip);font-size:13px;font-weight:500;white-space:nowrap}
+  .pill svg{width:14px;height:14px}
+  .pill-ok{background:var(--pill-positive-bg);color:var(--pill-positive-ink)}
+  .codigo{font-family:"Geist Mono",ui-monospace,Menlo,monospace; /* taste-skill-ignore: el código del pedido es un identificador */background:var(--raised);border-radius:var(--radius-chip);padding:1px 6px;font-weight:500}
+  .resumen-tit{font-size:13px;font-weight:500;color:var(--muted);margin:16px 0 2px}
+  .resumen-tit:first-child{margin-top:0}
+  .resumen{list-style:none;margin:0;padding:0}
+  .resumen li{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--rule)}
+  .resumen li:first-child{border-top:0}
+  .resumen b{text-align:right;font-weight:500;font-variant-numeric:tabular-nums}
+  .falla{background:var(--pill-negative-bg);color:var(--pill-negative-ink);border-radius:var(--radius-card);padding:12px 14px;margin-top:16px;font-size:14px}
+
+  .cargando{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);overflow:hidden}
+  .esqueleto{height:68px;border-top:1px solid var(--rule);position:relative}
+  .esqueleto:first-child{border-top:0}
+  .esqueleto::before{content:"";position:absolute;left:72px;top:18px;width:45%;height:14px;border-radius:4px;background:var(--track)}
+  .esqueleto::after{content:"";position:absolute;left:72px;top:40px;width:28%;height:10px;border-radius:4px;background:var(--track)}
+  .giro{width:18px;height:18px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:girar .8s linear infinite}
+  @keyframes girar{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.giro{animation:none}}
+
+  /* Maqueta */
+  .maqueta{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);padding:10px 10px 6px}
+  .maqueta svg{display:block;width:100%;height:auto}
+  .mq-pie{font-size:12px;color:var(--muted);text-align:center;margin-top:4px}
+  .mq-piso{fill:#f7f6f3;stroke:#a19e94;stroke-width:4}
+  .mq-zona{fill:none;stroke:#a19e94;stroke-width:2.5;stroke-dasharray:10 8}
+  .mq-zona-esc{fill:rgba(29,95,191,.05);stroke:#1d5fbf;stroke-width:2.5;stroke-dasharray:10 8}
+  .mq-esc{fill:#1d5fbf;stroke:#174e9c;stroke-width:2}
+  .mq-telon{fill:#e5484d;stroke:#b42318;stroke-width:2}
+  .mq-estrado{fill:#f2a541;stroke:#7a4a06;stroke-width:2}
+  .mq-alfombra{fill:#9f2d20;stroke:#6e1d14;stroke-width:2}
+  .mq-atril{fill:#7a4a06}
+  .mq-grada{fill:#5b6170}
+  .mq-silla{fill:#4b5568}
+  .mq-tv,.mq-consola{fill:#141414}
+  .mq-entrada{fill:#f7f6f3}
+  .mq-t{font:600 24px "Geist",system-ui,sans-serif;fill:#4b5568}
+  .mq-chico{font-size:20px}
+  .mq-mini{font-size:16px}
+  .mq-blanco{fill:#fff}
+  .mq-azul{fill:#174e9c}
+  .mq-suave{fill:#8a877e}
+  .b-t{font:600 17px "Geist",system-ui,sans-serif;fill:#3d3d3d}
+  .b-mini{font-size:13px}
+  .b-micro{font-size:10px}
+  .b-blanco{fill:#fff}
+  .b-azul{fill:#174e9c;font-weight:500}
+  .b-suave{fill:#8a877e}
+  .b-oscuro{fill:#141414}
+
+  /* Panel lateral de la maqueta */
+  .btn-mq{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 12px;border-radius:var(--radius-control);border:0;background:var(--secondary);font-weight:500;font-size:14px;cursor:pointer;color:var(--text)}
+  .btn-mq svg{width:18px;height:18px}
+  .btn-mq.pulso{animation:pulso 1.1s ease-out}
+  @keyframes pulso{0%{box-shadow:0 0 0 0 rgba(29,95,191,.55)}100%{box-shadow:0 0 0 12px rgba(29,95,191,0)}} /* taste-skill-ignore: respuesta momentánea cuando cambia la maqueta */
+  .mq-fondo{position:fixed;inset:0;background:rgba(10,10,10,.35);z-index:19}
+  /* taste-skill-ignore: el panel flota sobre el formulario en el celular */
+  .mq-panel{position:fixed;top:0;right:0;bottom:0;width:min(440px,90vw);background:var(--ground);z-index:20;box-shadow:-8px 0 24px rgba(10,10,10,.14);
+    transform:translateX(105%);visibility:hidden;transition:transform .25s ease,visibility .25s;display:flex;flex-direction:column;gap:12px;padding:16px;overflow-y:auto}
+  .mq-panel.abierto{transform:none;visibility:visible}
+  .mq-cab{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .mq-cab strong{font-size:18px;font-weight:600}
+  .cerrar-mq{width:44px;height:44px;border-radius:var(--radius-control);border:0;background:var(--secondary);font-size:22px;line-height:1;cursor:pointer}
+  @media (prefers-reduced-motion:reduce){.mq-panel{transition:none}.btn-mq.pulso{animation:none}}
+  @media (min-width:1000px){
+    body.en-form{padding-right:440px}
+    body.en-form .mq-panel{transform:none;visibility:visible;width:440px;box-shadow:none;border-left:1px solid var(--border)}
+    body.en-form .btn-mq,body.en-form .mq-fondo,body.en-form .cerrar-mq{display:none}
+  }
+
+  /* Lo confirmado y la vista del armado */
+  .seccion-tit{font-size:16px;font-weight:600;margin:28px 0 4px}
+  .seccion-sub{color:var(--muted);font-size:14px}
+  .confirmados{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+  .conf,.pedido{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+  .pedido{gap:12px;margin-top:12px}
+  .conf strong{font-size:15px;font-weight:600}
+  .conf p{color:var(--muted);font-size:14px}
+  .chips{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+  .chips li{background:var(--pill-neutral-bg);color:var(--pill-neutral-ink);border-radius:var(--radius-chip);padding:2px 8px;font-size:13px;white-space:nowrap}
+  .pedido-cab{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px}
+  .pedido-cab strong{font-size:16px;font-weight:600}
+  .pedido-cab span{color:var(--muted);font-size:14px}
+  .datos{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;margin:0}
+  .datos dt{font-size:13px;color:var(--muted);padding-top:2px}
+  .datos dd{margin:0;min-width:0}
+  .hilo{border-top:1px solid var(--rule);padding-top:12px;display:flex;flex-direction:column;gap:10px}
+  .mensajes{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .msg{background:var(--ground);border-radius:var(--radius-card);padding:10px 12px}
+  .msg-supervisor{background:var(--pill-warning-bg);border:1px solid var(--warning-border)}
+  .msg-cab{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted)}
+  .msg-cab strong{color:var(--text);font-size:14px;font-weight:600}
+  .msg p{white-space:pre-line;margin-top:2px}
+  .sin-msg{color:var(--muted);font-size:14px}
+  form.nuevo-msg{display:flex;flex-direction:column;gap:8px;margin:0}
+  .nuevo-msg textarea{min-height:70px}
+  .btn-msg{margin-top:0;min-height:44px;font-size:15px}
+  @media (max-width:420px){.datos{grid-template-columns:1fr;gap:2px}.datos dt{padding-top:8px}}
+  @media (max-width:360px){.opciones{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="demo"></div>
+<header class="barra-sup">
+  <span class="producto"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="7" rx="1.5" fill="#1d5fbf"/><circle cx="7" cy="15" r="1.6" fill="#141414"/><circle cx="12" cy="15" r="1.6" fill="#141414"/><circle cx="17" cy="15" r="1.6" fill="#141414"/><circle cx="7" cy="20" r="1.6" fill="#141414"/><circle cx="12" cy="20" r="1.6" fill="#141414"/><circle cx="17" cy="20" r="1.6" fill="#141414"/></svg>Sonido y montaje</span>
+  <span class="alcance">Colegio IEA</span>
+</header>
+<div class="app">
+  <main id="main" aria-live="polite"></main>
+</div>
+
+<script>
+/* ───────── Conexión con el servidor (o demo si se abre el archivo suelto) ───────── */
+// Dirección de la app de Apps Script (la que termina en /exec). Solo se usa cuando la página
+// está publicada fuera de Google, por ejemplo en GitHub Pages.
+const URL_API = 'https://script.google.com/macros/s/AKfycbykZhg3JM0q19ISg37BEFeUtoPSyC7AqjeFq7xLqMInrYtewpGT62l29o7GGAMx2ORC/exec';
+const EN_GOOGLE = !!(window.google && google.script && google.script.run);
+const CON_API = !EN_GOOGLE && (/^https:\/\/script\.google\.com\//.test(URL_API) || /^http:\/\/localhost/.test(URL_API));
+const DEMO = !EN_GOOGLE && !CON_API;   // abierto suelto: modo demostración
+const VERSION_PAGINA = '9';
+function revisarVersion(v) {
+  if (v === VERSION_PAGINA) return;
+  document.getElementById('demo').innerHTML = '<div class="demo" style="background:var(--error-suave);color:var(--error)">' +
+    'Página desactualizada: el Código.gs de este proyecto no coincide con el Index.html. Hay que pegar el último y publicar una nueva versión.</div>';
+}
+
+function llamar(fn, arg) {
+  return new Promise(function (ok, mal) {
+    if (DEMO) { setTimeout(function () { try { ok(DEMO_API[fn](arg)); } catch (e) { mal(e); } }, 500); return; }
+    if (EN_GOOGLE) { google.script.run.withSuccessHandler(ok).withFailureHandler(mal)[fn](arg); return; }
+    // Fuera de Google: se habla con Apps Script por la web. "text/plain" evita el permiso previo del navegador.
+    fetch(URL_API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, arg: arg }) })
+      .then(function (r) { if (!r.ok) throw new Error('El servidor respondió ' + r.status + '.'); return r.json(); })
+      .then(function (d) { if (d.error) mal(new Error(d.error)); else ok(d.resultado); })
+      .catch(function (e) { mal(e && e.message === 'Failed to fetch' ? new Error('No hay conexión con el servidor.') : e); });
+  });
+}
+
+/* ───────── Estado ───────── */
+const BANCOS = ['Como están (mirando al frente)', 'Mirando hacia atrás', 'Otra disposición (aclarar en observaciones)'];
+const PASOS = ['Tus datos', 'Lugar y montaje', 'Sonido', 'Pantallas y computadora', 'Último paso'];
+const E = { vista: 'cargando', eventos: [], cfg: null, token: null, eventoId: null, paso: 1, cant: {}, archivos: [], resultado: null, error: null };
+const $main = document.getElementById('main');
+
+/* ───────── Utilidades ───────── */
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+function aFecha(f) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(f || '');
+  return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+}
+function fechaLarga(f) {
+  const d = aFecha(f);
+  if (!d) return f || 'A confirmar';
+  const s = d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+function guardarLocal(k, v) { try { localStorage.setItem('sonido_' + k, v); } catch (e) {} }
+function leerLocal(k) { try { return localStorage.getItem('sonido_' + k) || ''; } catch (e) { return ''; } }
+function eventoActual() { return E.eventos.filter(function (e) { return e.id === E.eventoId; })[0]; }
+function megas(b) { return (b / 1048576).toFixed(1).replace('.', ',') + ' MB'; }
+function mail() { const m = esc(E.cfg.emailContacto); return '<a href="mailto:' + m + '">' + m + '</a>'; }
+
+/* ───────── Textos del montaje (los usan el resumen, la vista del armado y el panel) ───────── */
+const TARIMAS_POR_LATERAL = 6;
+function textoEscenario(v) {
+  return v === 'Sí' || v === 'Completo' ? 'Escenario completo' : v === 'Medio escenario' ? 'Medio escenario' : '';
+}
+function textoGradas(v) {
+  return v === 'Madera' ? 'Gradas de madera' : v === 'Metal' ? 'Gradas de metal' : v === 'Sí' ? 'Gradas' : '';
+}
+function textoSillas(s) {
+  if (!s.sillas || s.sillas === 'No') return '';
+  const n = s.cantidadSillas ? s.cantidadSillas + ' sillas' : 'Sillas';
+  return n + (s.sillas === 'Docentes y directivos' ? ' para docentes y directivos' : s.sillas === 'Público' ? ' para el público' : '');
+}
+function textoTeles(c) {
+  return { '1': 'Solo la del medio (sobre el escenario)', '2': '2 teles (las de los costados)', '3': '3 teles (una sobre el escenario)' }[String(c)] || (c ? c + ' teles' : '');
+}
+function textoLateral(s) {
+  return s.escenarioAdicional === 'Sí'
+    ? 'Escenario lateral ' + (s.posicion === 'Izquierda' ? 'izquierdo' : s.posicion === 'Derecha' ? 'derecho' : '') + ' (' + TARIMAS_POR_LATERAL + ' tarimas)'
+    : '';
+}
+/** Lista de lo que hay que armar para un pedido, en palabras. */
+function montajeLista(s) {
+  return [
+    textoEscenario(s.escenario), textoLateral(s),
+    s.telones === 'Sí' ? 'Telones' : '', s.alfombra === 'Sí' ? 'Alfombra' : '', s.estrado === 'Sí' ? 'Atril' : '',
+    textoGradas(s.gradas), textoSillas(s), s.bancos ? 'Bancos: ' + s.bancos.charAt(0).toLowerCase() + s.bancos.slice(1) : ''
+  ].filter(Boolean);
+}
+
+/* ───────── Maqueta del espacio en perspectiva ─────────
+   Basada en el croquis del gimnasio. Coordenadas en una grilla de 640 × 450, el escenario al fondo. */
+/** Junta uno o varios pedidos en lo que hay que dibujar. */
+function mqDe(lista, lugar) {
+  const si = function (k) { return lista.some(function (s) { return s[k] === 'Sí'; }); };
+  const laterales = [];
+  lista.forEach(function (s) {
+    if (s.escenarioAdicional === 'Sí' && s.posicion && laterales.indexOf(s.posicion) < 0) laterales.push(s.posicion);
+  });
+  // Escenario: 'Completo' (o el 'Sí' de pedidos viejos) gana sobre 'Medio escenario'.
+  const esc = lista.reduce(function (a, s) {
+    if (s.escenario === 'Completo' || s.escenario === 'Sí') return 'completo';
+    if (s.escenario === 'Medio escenario' && !a) return 'medio';
+    return a;
+  }, '');
+  const gradas = lista.reduce(function (a, s) {
+    return a || (s.gradas === 'Madera' ? 'madera' : s.gradas === 'Metal' ? 'metal' : s.gradas === 'Sí' ? 'si' : '');
+  }, '');
+  let sillas = null;
+  lista.forEach(function (s) {
+    if (!s.sillas || s.sillas === 'No') return;
+    const tipo = s.sillas === 'Docentes y directivos' ? 'docentes' : 'publico';
+    if (!sillas || tipo === 'publico') sillas = { tipo: tipo, n: Number(s.cantidadSillas) || 0 };
+  });
+  const teles = { fijas: false, movil: false };
+  lista.forEach(function (s) {
+    if (s.teles !== 'Sí') return;
+    const c = String(s.cantidadTeles || '2');
+    if (c === '2' || c === '3') teles.fijas = true;
+    if (c === '3' || c === '1') teles.movil = true;
+  });
+  return {
+    lugar: lugar || (lista[0] && lista[0].lugar) || '',
+    escenario: esc, laterales: laterales,
+    telones: si('telones'), alfombra: si('alfombra'), atril: si('estrado'), gradas: gradas, sillas: sillas,
+    consola: lista.some(function (s) { return s.sonido && s.sonido !== 'No necesita'; }),
+    teles: teles,
+    bancos: (lista[0] && lista[0].bancos) || ''
+  };
+}
+
+/* Maqueta en perspectiva: el lugar visto desde el fondo, con el escenario arriba */
+function maquetaSVG(m) {
+  const OY = 92, K = 0.6, CX = 320;
+  const P = function (x, y, z) {
+    const f = 0.84 + 0.16 * (y / 450);
+    return [CX + (x - CX) * f, OY + y * K - (z || 0) * f];
+  };
+  const pts = function (arr) { return arr.map(function (q) { return q[0].toFixed(1) + ',' + q[1].toFixed(1); }).join(' '); };
+  const area = function (a) { let s = 0; for (let i = 0; i < a.length; i++) { const b = a[(i + 1) % a.length]; s += a[i][0] * b[1] - b[0] * a[i][1]; } return s; };
+  const caras = [];   // [profundidad, svg]
+  const bloque = function (planta, z0, z1, cTop, cFrente, cLado, extra) {
+    const svg = [];
+    for (let i = 0; i < planta.length; i++) {
+      const a = planta[i], b = planta[(i + 1) % planta.length];
+      const cara = [P(a[0], a[1], z0), P(b[0], b[1], z0), P(b[0], b[1], z1), P(a[0], a[1], z1)];
+      if (area(cara) <= 0) continue;
+      const frente = Math.abs(b[1] - a[1]) < Math.abs(b[0] - a[0]);
+      svg.push('<polygon points="' + pts(cara) + '" fill="' + (frente ? cFrente : cLado) + '"/>');
+    }
+    svg.push('<polygon points="' + pts(planta.map(function (q) { return P(q[0], q[1], z1); })) + '" fill="' + cTop + '"/>');
+    caras.push([Math.max.apply(null, planta.map(function (q) { return q[1]; })), svg.join('') + (extra || '')]);
+  };
+  const rect = function (x, y, w, d) { return [[x, y], [x + w, y], [x + w, y + d], [x, y + d]]; };
+  const girado = function (cx, cy, w, d, ang) {
+    const r = ang * Math.PI / 180, c = Math.cos(r), s = Math.sin(r);
+    return [[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2]].map(function (q) { return [cx + q[0] * c - q[1] * s, cy + q[0] * s + q[1] * c]; });
+  };
+  const texto = function (x, y, z, s, cls) { const q = P(x, y, z); return '<text x="' + q[0].toFixed(1) + '" y="' + q[1].toFixed(1) + '" class="b-t ' + (cls || '') + '" text-anchor="middle" dominant-baseline="central">' + s + '</text>'; };
+  const plano = function (planta, z, fill, extra) { return '<polygon points="' + pts(planta.map(function (q) { return P(q[0], q[1], z); })) + '" fill="' + fill + '"' + (extra || '') + '/>'; };
+  const pared = function (x0, x1, alto, fill) { return '<polygon points="' + pts([P(x0, 0, alto), P(x1, 0, alto), P(x1, 0, 0), P(x0, 0, 0)]) + '" fill="' + fill + '"/>'; };
+  const borde = function (x, y0, y1) { return '<polyline points="' + pts([P(x, y1, 0), P(x, y0, 0), P(x, y0, 78)]) + '" fill="none" stroke="#b9b3a8" stroke-width="3"/>'; };
+  const fondo = [];
+  const desc = [];
+  let profundo = 450;   // hasta dónde llega el piso (para recortar el dibujo)
+
+  if (m.lugar === 'Templo') {
+    /* Templo: largo y angosto, el frente al fondo y bancos en dos columnas con pasillo central */
+    const x0 = 190, x1 = 450;
+    fondo.push(pared(x0, x1, 78, '#e7e3dc'));
+    fondo.push(plano(rect(x0, 0, x1 - x0, 450), 0, '#ebe6dd'));
+    fondo.push(plano(rect(306, 70, 28, 380), 0, '#e0d9cc'));   // pasillo
+    fondo.push(borde(x0, 0, 450), borde(x1, 0, 450));
+    bloque(rect(x0, 0, x1 - x0, 50), 0, 10, '#d9c3a0', '#b89a6e', '#c7ad84', texto(320, 25, 11, 'Frente', 'b-mini'));
+    // Bancos: 'Mirando al frente' (como están) o 'Mirando hacia atrás'
+    const atras = /atr[aá]s/i.test(m.bancos);
+    for (let y = 92; y < 420; y += 30) {
+      [[x0 + 12, 104], [334, 104]].forEach(function (c) {
+        const respaldo = atras ? y : y + 12;
+        bloque(rect(c[0], y, c[1], 12), 0, 7, '#a9865a', '#8a6a42', '#97764c');
+        bloque(rect(c[0], respaldo, c[1], 3), 0, 15, '#8a6a42', '#6e5434', '#6e5434');
+      });
+    }
+    caras.push([1000, texto(320, 438, 0, 'Entrada', 'b-mini b-suave')]);
+    desc.push('bancos ' + (atras ? 'mirando hacia atrás' : 'mirando al frente'));
+  } else if (m.lugar === 'Casa congregacional') {
+    /* Casa congregacional: habitación rectangular más chica, con pizarrón blanco en la pared del fondo */
+    // Dos salas iguales, una detrás de la otra, separadas por una división con abertura al medio
+    const x0 = 150, x1 = 490, d = 200;
+    profundo = 2 * d;
+    fondo.push(pared(x0, x1, 78, '#e7e3dc'));
+    fondo.push(plano(rect(x0, 0, x1 - x0, 2 * d), 0, '#ebe8e2'));
+    fondo.push(borde(x0, 0, 2 * d), borde(x1, 0, 2 * d));
+    fondo.push('<line x1="' + P(x0, 2 * d, 0)[0] + '" y1="' + P(x0, 2 * d, 0)[1] + '" x2="' + P(x1, 2 * d, 0)[0] + '" y2="' + P(x1, 2 * d, 0)[1] + '" stroke="#b9b3a8" stroke-width="3"/>');
+    bloque(rect(x0, d - 4, 120, 8), 0, 22, '#d6d1c7', '#c7c1b5', '#bdb6a9');
+    bloque(rect(x1 - 120, d - 4, 120, 8), 0, 22, '#d6d1c7', '#c7c1b5', '#bdb6a9');
+    // Pizarrón blanco
+    fondo.push('<polygon points="' + pts([P(236, 0, 72), P(404, 0, 72), P(404, 0, 38), P(236, 0, 38)]) + '" fill="#ffffff" stroke="#8a877e" stroke-width="3"/>');
+    fondo.push('<polygon points="' + pts([P(236, 0, 38), P(404, 0, 38), P(404, 0, 35), P(236, 0, 35)]) + '" fill="#8a877e"/>');
+    // Mueble de madera con cajones, abajo del pizarrón
+    let cajones = '';
+    const linea = function (a, b) { return '<line x1="' + a[0].toFixed(1) + '" y1="' + a[1].toFixed(1) + '" x2="' + b[0].toFixed(1) + '" y2="' + b[1].toFixed(1) + '" stroke="#7a5a34" stroke-width="1.5"/>'; };
+    for (let c = 0; c < 3; c++) for (let f = 0; f < 2; f++) {
+      const xa = 252 + c * 46, za = 4 + f * 13;
+      cajones += '<polygon points="' + pts([P(xa + 3, 22, za + 11), P(xa + 43, 22, za + 11), P(xa + 43, 22, za), P(xa + 3, 22, za)]) + '" fill="#b88d5a" stroke="#7a5a34" stroke-width="1"/>';
+      cajones += linea(P(xa + 17, 22, za + 6), P(xa + 29, 22, za + 6));
+    }
+    bloque(rect(250, 0, 140, 22), 0, 30, '#c79a62', '#a97c47', '#9c7442', cajones);
+  } else {
+    /* Gimnasio (y esquema aproximado de los patios) */
+    const gym = m.lugar === 'Gimnasio';
+    fondo.push(pared(0, 640, 78, '#e7e3dc'));
+    fondo.push(plano(rect(0, 0, 640, 450), 0, gym ? '#ecdcc2' : '#e9e6df'));
+    if (gym) for (let x = 40; x < 640; x += 40) fondo.push('<line x1="' + P(x, 0, 0)[0].toFixed(1) + '" y1="' + P(x, 0, 0)[1].toFixed(1) + '" x2="' + P(x, 450, 0)[0].toFixed(1) + '" y2="' + P(x, 450, 0)[1].toFixed(1) + '" stroke="#dcc8a8" stroke-width="1"/>');
+    fondo.push(borde(0, 0, 335), borde(640, 0, 335));
+    fondo.push('<line x1="' + P(0, 401, 0)[0] + '" y1="' + P(0, 401, 0)[1] + '" x2="' + P(0, 450, 0)[0] + '" y2="' + P(0, 450, 0)[1] + '" stroke="#b9b3a8" stroke-width="3"/>');
+    fondo.push('<line x1="' + P(640, 401, 0)[0] + '" y1="' + P(640, 401, 0)[1] + '" x2="' + P(640, 450, 0)[0] + '" y2="' + P(640, 450, 0)[1] + '" stroke="#b9b3a8" stroke-width="3"/>');
+    fondo.push(texto(38, 368, 0, 'Entrada', 'b-mini b-suave'), texto(602, 368, 0, 'Entrada', 'b-mini b-suave'));
+
+    if (m.telones) {
+      let pl = '';
+      for (let x = 182; x < 458; x += 12) pl += '<polygon points="' + pts([P(x, 0, 74), P(x + 6, 0, 74), P(x + 6, 0, 2), P(x, 0, 2)]) + '" fill="#c93a40" opacity=".55"/>';
+      fondo.push(pared(178, 462, 76, '#e5484d') + pl);
+      fondo.push('<polygon points="' + pts([P(176, 0, 80), P(464, 0, 80), P(464, 0, 66), P(176, 0, 66)]) + '" fill="#b42318"/>');
+      fondo.push(texto(320, 0, 73, 'Telón', 'b-blanco b-mini'));
+      desc.push('telón');
+    }
+    if (m.teles.fijas) {
+      [[104, 160], [484, 540]].forEach(function (r) {
+        fondo.push('<polygon points="' + pts([P(r[0], 0, 64), P(r[1], 0, 64), P(r[1], 0, 34), P(r[0], 0, 34)]) + '" fill="#141414"/>');
+        fondo.push(texto((r[0] + r[1]) / 2, 0, 49, 'TV', 'b-blanco b-mini'));
+      });
+    }
+    if (m.teles.fijas || m.teles.movil) desc.push(m.teles.fijas && m.teles.movil ? '3 teles' : m.teles.fijas ? '2 teles' : 'solo la tele del medio');
+
+    // Escenario completo o medio escenario (la mitad izquierda)
+    const medio = m.escenario === 'medio';
+    const ex = 178, ew = medio ? 142 : 284, ec = ex + ew / 2;
+    const alfombra = function (z) {
+      let v = '';
+      for (let y = 26; y < 126; y += 10) v += '<line x1="' + P(ex + 22, y, z)[0].toFixed(1) + '" y1="' + P(ex + 22, y, z)[1].toFixed(1) + '" x2="' + P(ex + ew - 22, y, z)[0].toFixed(1) + '" y2="' + P(ex + ew - 22, y, z)[1].toFixed(1) + '" stroke="#4a4f59" stroke-width="1"/>';
+      return plano(rect(ex + 16, 16, ew - 32, 114), z, '#3a3e46', ' stroke="#5c626d" stroke-width="2"') + v;
+    };
+    if (m.escenario) {
+      if (medio) fondo.push(plano(rect(320, 0, 142, 140), 0, 'none', ' stroke="#1d5fbf" stroke-width="2" stroke-dasharray="8 6" opacity=".45"'));
+      bloque(rect(ex, 0, ew, 140), 0, 24, '#2f6fd6', '#174e9c', '#1d5fbf',
+        (m.alfombra ? alfombra(24.5) : '') + (medio ? texto(ec, 30, 25, 'Medio', 'b-blanco b-mini') + texto(ec, 48, 25, 'escenario', 'b-blanco b-mini') : texto(320, 70, 25, 'Escenario', 'b-blanco')));
+      desc.push(medio ? 'medio escenario' : 'escenario');
+    } else {
+      fondo.push(plano(rect(178, 0, 284, 140), 0, 'rgba(29,95,191,.08)', ' stroke="#1d5fbf" stroke-width="2" stroke-dasharray="8 6"'));
+      if (m.alfombra) fondo.push(alfombra(0.5));
+      fondo.push(texto(320, 70, 0, 'Zona de escenario', m.alfombra ? 'b-blanco' : 'b-azul'));
+    }
+    if (m.alfombra) desc.push('alfombra');
+    const zEsc = m.escenario ? 24 : 0;
+    if (m.teles.movil) {
+      const tx = medio ? ec : 320;
+      bloque(rect(tx - 4, 20, 8, 6), zEsc, zEsc + 22, '#3a3a3a', '#2a2a2a', '#2a2a2a');
+      bloque(rect(tx - 30, 18, 60, 4), zEsc + 22, zEsc + 52, '#141414', '#141414', '#141414', texto(tx, 22, zEsc + 37, 'TV', 'b-blanco b-mini'));
+      caras[caras.length - 2][0] = caras[caras.length - 1][0] = 141;
+    }
+    if (m.atril) {
+      const ax = medio ? ex + ew - 44 : 404;
+      bloque(rect(ax, medio ? 100 : 92, 34, 26), zEsc, zEsc + 26, '#f6b75c', '#c98322', '#dd9837');
+      caras[caras.length - 1][0] = 142;
+      desc.push('atril');
+    }
+    [['Izquierda', 95, -30, 'Lateral izq.'], ['Derecha', 545, 30, 'Lateral der.']].forEach(function (l) {
+      if (m.laterales.indexOf(l[0]) < 0) return;
+      bloque(girado(l[1], 125, 128, 74, l[2]), 0, 20, '#2f6fd6', '#174e9c', '#1d5fbf', texto(l[1], 125, 21, l[3], 'b-blanco b-mini'));
+      desc.push('escenario lateral ' + l[0].toLowerCase());
+    });
+    // Consola: a la derecha; si hay lateral izquierdo, a la izquierda entre los dos escenarios
+    if (m.consola) {
+      const cx = m.laterales.indexOf('Izquierda') >= 0 ? 98 : 472;
+      bloque(rect(cx, 24, 70, 26), 0, 30, '#d8d4cc', '#b9b3a8', '#c7c2b8');
+      bloque(rect(cx + 5, 27, 60, 19), 30, 35, '#2a2a2a', '#141414', '#141414', texto(cx + 35, 50, 15, 'Consola', 'b-mini b-oscuro'));
+      caras[caras.length - 1][0] = 51;
+      desc.push('consola');
+    }
+    const silla = function (cx, cy, ang, fx, fy) {
+      bloque(girado(cx, cy, 10, 8, ang), 0, 6, '#a4a9b3', '#6b7080', '#7c818c');
+      bloque(girado(cx - fx * 5, cy - fy * 5, 10, 2, ang), 0, 14, '#5b6170', '#454a56', '#454a56');
+    };
+    const cartel = function (x, y, t) {
+      const q = P(x, y, 0), w = t.length * 7.6 + 22;
+      caras.push([1001, '<rect x="' + (q[0] - w / 2).toFixed(1) + '" y="' + (q[1] - 12).toFixed(1) + '" width="' + w.toFixed(1) + '" height="24" rx="12" fill="#ffffff" fill-opacity=".92" stroke="#cfcac0" stroke-width="1"/>' +
+        '<text x="' + q[0].toFixed(1) + '" y="' + q[1].toFixed(1) + '" class="b-t b-mini" text-anchor="middle" dominant-baseline="central">' + t + '</text>']);
+    };
+    const n = m.sillas && m.sillas.n ? m.sillas.n + ' sillas' : 'Sillas';
+    if (m.sillas && m.sillas.tipo === 'publico') {
+      for (let f = 0; f < 7; f++) for (let c = 0; c < 10; c++) {
+        [118, 346].forEach(function (x0) { silla(x0 + 5 + c * 19, 192 + f * 24, 0, 0, -1); });
+      }
+      cartel(320, 268, n);
+      desc.push(n.toLowerCase() + ' para el público');
+    } else {
+      const docentes = m.sillas && m.sillas.tipo === 'docentes';
+      const cx = docentes ? 280 : 320, rx = docentes ? 180 : 220;
+      fondo.push('<ellipse cx="' + P(cx, 270, 0)[0] + '" cy="' + P(cx, 270, 0)[1] + '" rx="' + (rx * (0.84 + 0.16 * 270 / 450)) + '" ry="' + (92 * K) + '" fill="rgba(20,20,20,.04)" stroke="#a19e94" stroke-width="2" stroke-dasharray="8 7"/>');
+      fondo.push(texto(cx, 270, 0, 'Público', 'b-suave'));
+      if (docentes) {
+        // Lateral derecho: filas largas en diagonal, mirando al escenario
+        const a = Math.atan2(90 - 270, 330 - 535), fx = Math.cos(a), fy = Math.sin(a);
+        const rxv = -fy, ryv = fx, ang = Math.atan2(ryv, rxv) * 180 / Math.PI;
+        for (let j = 0; j < 6; j++) for (let i = 0; i < 5; i++) {
+          const k = (i - 2) * 17, b = j * 19;
+          silla(492 + rxv * k - fx * b, 222 + ryv * k - fy * b, ang, fx, fy);
+        }
+        cartel(520, 338, n);
+        desc.push(n.toLowerCase() + ' para docentes y directivos');
+      }
+    }
+    if (m.gradas) {
+      const madera = m.gradas === 'madera';
+      const tonos = madera ? [['#c79a62', '#9c7442', '#ad8350'], ['#d2a872', '#9c7442', '#ad8350'], ['#dcb482', '#9c7442', '#ad8350']]
+        : [['#9aa0ab', '#6b7080', '#7c818c'], ['#a7adb7', '#6b7080', '#7c818c'], ['#b4b9c2', '#6b7080', '#7c818c']];
+      for (let i = 0; i < 4; i++) {
+        const x = 136 + i * 83;
+        bloque(rect(x, 404, 74, 40), 0, 8, tonos[0][0], tonos[0][1], tonos[0][2]);
+        bloque(rect(x, 417, 74, 27), 8, 16, tonos[1][0], tonos[1][1], tonos[1][2]);
+        bloque(rect(x, 430, 74, 14), 16, 24, tonos[2][0], tonos[2][1], tonos[2][2]);
+      }
+      const nombre = m.gradas === 'madera' ? 'Gradas de madera' : m.gradas === 'metal' ? 'Gradas de metal' : 'Gradas';
+      caras.push([1000, texto(297, 392, 0, nombre, 'b-mini')]);
+      desc.push(nombre.toLowerCase());
+    }
+  }
+
+  caras.sort(function (a, b) { return a[0] - b[0]; });
+  const conocido = ['Gimnasio', 'Templo', 'Casa congregacional'].indexOf(m.lugar) >= 0;
+  const etiqueta = (m.lugar || 'Espacio') + (m.lugar && !conocido ? ' · esquema aproximado' : '');
+  const alto = Math.ceil(OY + profundo * K + 6);
+  return '<svg viewBox="0 ' + (OY - 80) + ' 640 ' + (alto - OY + 80) + '" role="img" aria-label="Maqueta: ' + esc(etiqueta) + (desc.length ? ', con ' + esc(desc.join(', ')) : '') + '">' +
+    fondo.join('') + caras.map(function (c) { return c[1]; }).join('') + '</svg>' +
+    '<p class="mq-pie">' + esc(etiqueta) + ' · vista desde el fondo</p>';
+}
+
+const ICONOS = {
+  plano: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 3v5h8V3"/><path d="M7 14h2M11 14h2M15 14h2M7 18h2M11 18h2M15 18h2"/></svg>',
+  marca: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>',
+  chev: '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>',
+  atras: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>',
+  ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>',
+  clip: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 11-8.6 8.6a5 5 0 0 1-7-7L14 4a3.3 3.3 0 0 1 4.7 4.7l-8.6 8.6a1.7 1.7 0 0 1-2.4-2.4L15.5 7"/></svg>'
+};
+
+function encabezado() {
+  return '<header class="top"><h1>Próximos actos</h1><p class="bajada">Elegí el acto para el que necesitás sonido, escenario u otro montaje.</p></header>';
+}
+function pie() { return E.cfg ? '<p class="pie">¿Dudas? Escribinos a ' + mail() + '</p>' : ''; }
+function volver(destino, texto) {
+  return '<button type="button" class="volver" data-accion="ir" data-vista="' + destino + '">' + ICONOS.atras + esc(texto) + '</button>';
+}
+
+/* ───────── Piezas del formulario ───────── */
+function segmentado(nombre, titulo, opciones, claseExtra) {
+  return '<div class="pregunta ' + (claseExtra || '') + '" data-campo="' + nombre + '" role="radiogroup" aria-labelledby="t-' + nombre + '">' +
+    '<span class="preg-tit" id="t-' + nombre + '">' + titulo + '</span><div class="seg">' +
+    opciones.map(function (o) {
+      return '<label><input type="radio" name="' + nombre + '" value="' + esc(o) + '"><span>' + esc(o) + '</span></label>';
+    }).join('') + '</div></div>';
+}
+function tarjetas(nombre, titulo, opciones, una, marcado) {
+  return '<div class="pregunta" data-campo="' + nombre + '" role="radiogroup" aria-labelledby="t-' + nombre + '">' +
+    '<span class="preg-tit" id="t-' + nombre + '">' + titulo + '</span><div class="opciones' + (una ? ' una' : '') + '">' +
+    opciones.map(function (o) {
+      return '<label class="opcion"><input type="radio" name="' + nombre + '" value="' + esc(o.v) + '"' + (o.v === marcado ? ' checked' : '') + '>' +
+        '<span>' + esc(o.t) + (o.d ? '<small>' + esc(o.d) + '</small>' : '') + '</span></label>';
+    }).join('') + '</div></div>';
+}
+function stepper(id, nombre, desc, n, max) {
+  if (!Number.isFinite(n)) n = id === 'cable' ? 1 : 0;
+  return '<div class="equipo' + (n ? ' activo' : '') + '" data-paso-ctl="' + id + '">' +
+    '<div class="eq-texto"><span class="eq-nombre">' + esc(nombre) + '</span>' + (desc ? '<span class="eq-desc">' + esc(desc) + '</span>' : '') + '</div>' +
+    '<div class="paso-ctl"><button type="button" data-accion="menos" aria-label="Quitar ' + esc(nombre) + '"' + (n <= (id === 'cable' ? 1 : 0) ? ' disabled' : '') + '>−</button>' +
+    '<output aria-live="polite">' + n + '</output>' +
+    '<button type="button" data-accion="mas" aria-label="Agregar ' + esc(nombre) + '"' + (n >= max ? ' disabled' : '') + '>+</button></div></div>';
+}
+function limitesMics() {
+  const c = E.cfg.canalesInalambricos || 4;
+  ['inal', 'vinch', 'cable', 'pie'].forEach(function (k) { if (!Number.isFinite(E.cant[k])) E.cant[k] = k === 'cable' ? 1 : 0; });
+  return { inal: c - E.cant.vinch, vinch: Math.min(E.cfg.maxVinchas || 2, c - E.cant.inal), cable: E.cfg.maxAlambricos || 6, pie: E.cfg.maxPies || 8 };
+}
+function htmlMics() {
+  const l = limitesMics();
+  return stepper('inal', 'Micrófono inalámbrico de mano', '', E.cant.inal, l.inal) +
+    stepper('vinch', 'Vincha', 'Micrófono que se coloca en la cabeza', E.cant.vinch, l.vinch);
+}
+function htmlCanales() {
+  const c = E.cfg.canalesInalambricos, usados = E.cant.inal + E.cant.vinch;
+  let barras = '';
+  for (let i = 0; i < c; i++) barras += '<i class="' + (i < usados ? 'usado' : '') + '"></i>';
+  return '<span aria-hidden="true" style="display:flex;gap:4px">' + barras + '</span> ' + usados + ' de ' + c + ' inalámbricos';
+}
+function actualizarMics() {
+  document.getElementById('mics').innerHTML = htmlMics();
+  document.getElementById('canales').innerHTML = htmlCanales();
+  document.getElementById('nota-vincha').hidden = E.cant.vinch === 0;
+}
+
+/* ───────── Vistas ───────── */
+function vistaCargando() {
+  return encabezado() + '<div class="cargando" aria-label="Cargando"><div class="esqueleto"></div><div class="esqueleto"></div><div class="esqueleto"></div></div>';
+}
+function vistaError() {
+  return encabezado() + '<div class="msj msj-error">No se pudo cargar la información. ' + esc(E.error || '') + '</div>' +
+    '<button type="button" class="btn btn-sec" data-accion="reintentar">Reintentar</button>';
+}
+function vistaEventos() {
+  if (!E.eventos.length) return encabezado() + '<div class="vacio">Por ahora no hay eventos abiertos para pedir.</div>' + pie();
+  return encabezado() + '<div class="lista">' + E.eventos.map(function (ev) {
+    const d = aFecha(ev.fecha);
+    const sub = [ev.hora, ev.lugar].filter(Boolean).join(' · ');
+    return '<button type="button" class="evento" data-accion="abrir" data-id="' + esc(ev.id) + '">' +
+      '<span class="dia">' + (d ? '<b>' + d.getDate() + '</b><small>' + MESES[d.getMonth()] + '</small>' : '<small>s/f</small>') + '</span>' +
+      '<span class="ev-info"><strong>' + esc(ev.nombre) + '</strong>' + (sub ? '<span>' + esc(sub) + '</span>' : '') + '</span>' +
+      ICONOS.chev + '</button>';
+  }).join('') + '</div>' + pie();
+}
+function vistaEvento() {
+  const ev = eventoActual();
+  if (!ev) { E.vista = 'eventos'; return vistaEventos(); }
+  return '<div style="padding-top:12px">' + volver('eventos', 'Eventos') + '</div>' +
+    '<h1>' + esc(ev.nombre) + '</h1>' +
+    '<div class="ficha"><dl>' +
+      '<dt>Fecha</dt><dd>' + esc(fechaLarga(ev.fecha)) + '</dd>' +
+      (ev.hora ? '<dt>Horario</dt><dd>' + esc(ev.hora) + ' h</dd>' : '') +
+      (ev.lugar ? '<dt>Lugar</dt><dd>' + esc(ev.lugar) + '</dd>' : '') +
+    '</dl>' + (ev.descripcion ? '<p class="desc">' + esc(ev.descripcion) + '</p>' : '') + '</div>' +
+    '<button type="button" class="btn btn-pri" data-accion="ir" data-vista="form">Hacer un pedido</button>' +
+    vistaConfirmados(ev) + pie();
+}
+
+function chipsPedido(s) {
+  const l = montajeLista(s);
+  if (s.sonido && s.sonido !== 'No necesita') l.push('Sonido ' + s.sonido.toLowerCase());
+  (s.items || []).forEach(function (it) { l.push(it.cantidad + ' × ' + it.equipo.toLowerCase()); });
+  if (s.teles === 'Sí') l.push('Teles: ' + textoTeles(s.cantidadTeles).toLowerCase());
+  return l;
+}
+function vistaConfirmados(ev) {
+  const c = ev.confirmados || [];
+  if (!c.length) return '<h3 class="seccion-tit">Ya confirmado para este acto</h3><p class="seccion-sub">Todavía no hay pedidos confirmados.</p>';
+  return '<h3 class="seccion-tit">Ya confirmado para este acto</h3>' +
+    '<p class="seccion-sub">Lo que ya se va a usar, según los pedidos confirmados.</p>' +
+    '<div class="maqueta" style="margin-top:10px">' + maquetaSVG(mqDe(c, ev.lugar)) + '</div>' +
+    '<div class="confirmados">' + c.map(function (s) {
+      return '<div class="conf"><strong>' + esc(s.departamento) + '</strong>' +
+        (s.actividad ? '<p>' + esc(s.actividad.length > 140 ? s.actividad.slice(0, 140) + '…' : s.actividad) + '</p>' : '') +
+        '<ul class="chips">' + chipsPedido(s).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>';
+    }).join('') + '</div>';
+}
+
+function vistaForm() {
+  const ev = eventoActual();
+  if (!ev) { E.vista = 'eventos'; return vistaEventos(); }
+  const cfg = E.cfg;
+  const lugarEvento = cfg.lugares.filter(function (l) { return l.toLowerCase() === String(ev.lugar).trim().toLowerCase(); })[0] || '';
+  const ext = cfg.extensiones.map(function (x) { return '.' + x; }).join(',');
+  const titulo = function (n) { return '<h2 tabindex="-1">' + PASOS[n - 1] + '</h2>'; };
+
+  return '<div class="form-top"><div class="form-top-fila">' + volver('evento', ev.nombre) +
+      '<button type="button" class="btn-mq" data-accion="abrir-mq" aria-controls="mq-panel" aria-expanded="false">' + ICONOS.plano + 'Ver maqueta</button></div>' +
+      '<p class="paso-n" id="paso-n"></p><div class="progreso" aria-hidden="true">' + PASOS.map(function () { return '<i></i>'; }).join('') + '</div></div>' +
+    '<form id="form" novalidate>' +
+
+    // PASO 1
+    '<section class="paso" data-n="1">' + titulo(1) +
+      '<div class="campo" data-campo="nombre"><label for="nombre">Nombre y apellido</label>' +
+        '<input type="text" id="nombre" autocomplete="name" maxlength="60" value="' + esc(leerLocal('nombre')) + '"></div>' +
+      '<div class="campo" data-campo="departamento"><label for="depto">Departamento o área</label>' +
+        '<input type="text" id="depto" list="deptos" maxlength="60" value="' + esc(leerLocal('depto')) + '">' +
+        '<datalist id="deptos"><option value="Música"><option value="Ciencias Sociales"><option value="Lengua y Literatura"><option value="Educación Física"><option value="Arte"><option value="Ciencias Naturales"><option value="Matemática"><option value="Idiomas"><option value="Dirección"><option value="Preceptoría"></datalist></div>' +
+      '<div class="campo" data-campo="actividad"><label for="actividad">¿Qué van a hacer?</label>' +
+        '<textarea id="actividad" maxlength="1000" placeholder="Ej.: 4.º grado canta dos canciones con guitarra, después hay lecturas y al final se proyecta un video."></textarea>' +
+        '<span class="ayuda">Contanos cómo va a ser el acto: quiénes participan, si hay música en vivo, lecturas, videos, baile… Así nos hacemos una idea de qué preparar.</span></div>' +
+    '</section>' +
+
+    // PASO 2
+    '<section class="paso" data-n="2" hidden>' + titulo(2) +
+      tarjetas('lugar', '¿Dónde es?', cfg.lugares.map(function (l) { return { v: l, t: l }; }), false, lugarEvento) +
+      '<div class="pregunta" id="b-bancos" hidden>' +
+        tarjetas('bancos', '¿Qué hacemos con los bancos?', BANCOS.map(function (b) { return { v: b, t: b }; }), true) + '</div>' +
+      '<div id="b-escenario" style="display:flex;flex-direction:column;gap:22px">' +
+        segmentado('escenario', '¿Usan escenario?', ['Sí', 'No']) +
+        '<div class="anidado" id="b-tam-esc" hidden>' +
+          tarjetas('tamEscenario', '¿Escenario completo o medio?', [
+            { v: 'Completo', t: 'Escenario completo' },
+            { v: 'Medio escenario', t: 'Medio escenario', d: 'La mitad del escenario' }
+          ]) +
+          '<div class="anidado" id="b-adicional" hidden>' +
+            segmentado('escenarioAdicional', '¿Necesitan escenario adicional?', ['Sí', 'No']) +
+            '<span class="ayuda">Cada escenario adicional se arma con ' + TARIMAS_POR_LATERAL + ' tarimas.</span>' +
+            '<div id="b-posicion" hidden>' + segmentado('posicion', '¿De qué lado?', ['Izquierda', 'Derecha']) +
+              '<span class="ayuda">Mirando hacia el escenario.</span></div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="pregunta"><span class="preg-tit">¿Qué más hay que preparar?</span><div class="grupo-sn">' +
+        segmentado('estrado', 'Atril', ['Sí', 'No'], 'sn') +
+        segmentado('sillas', 'Sillas', ['Sí', 'No'], 'sn') +
+        '<div class="anidado" id="b-sillas" hidden>' +
+          '<div id="b-tipo-sillas">' + tarjetas('tipoSillas', '¿Para quién son?', [
+            { v: 'Público', t: 'Para el público', d: 'Frente al escenario' },
+            { v: 'Docentes y directivos', t: 'Para docentes y directivos', d: 'En el lateral derecho, mirando al escenario' }
+          ], true) + '</div>' +
+          '<div class="campo" data-campo="cantidadSillas"><label for="cantidadSillas">¿Cuántas sillas?</label>' +
+            '<input type="text" id="cantidadSillas" inputmode="numeric" maxlength="4" autocomplete="off" style="max-width:140px"></div>' +
+          '<div class="nota" id="nota-sillas">Las sillas se arman para eventos con familias o ceremonias, como una entrega de diplomas. En un acto común no se despliegan.</div>' +
+        '</div>' +
+        segmentado('telones', 'Telones', ['Sí', 'No'], 'sn') +
+        segmentado('alfombra', 'Alfombra', ['Sí', 'No'], 'sn') +
+        segmentado('gradas', 'Gradas', ['Sí', 'No'], 'sn') +
+        '<div class="anidado" id="b-gradas" hidden>' + segmentado('tipoGradas', '¿De madera o de metal?', ['Madera', 'Metal']) + '</div>' +
+      '</div></div>' +
+      '<div class="campo" data-campo="obsMontaje"><label for="obsMontaje">Observaciones del montaje <span class="opc">(opcional)</span></label>' +
+        '<textarea id="obsMontaje" maxlength="500" placeholder="Ej.: necesitamos 10 sillas sobre el escenario y una mesa para los diplomas."></textarea></div>' +
+    '</section>' +
+
+    // PASO 3
+    '<section class="paso" data-n="3" hidden>' + titulo(3) +
+      tarjetas('sonido', '¿Qué sonido necesitan?', [
+        { v: 'Completo', t: 'Sonido completo' },
+        { v: 'Pequeño', t: 'Sonido pequeño' },
+        { v: 'No necesita', t: 'No necesitamos sonido' }
+      ], true) +
+      '<div id="b-sonido" hidden style="display:flex;flex-direction:column;gap:22px">' +
+        '<div class="campo" data-campo="inalambricos"><span class="preg-tit">Micrófonos inalámbricos y vinchas</span>' +
+          '<div class="equipos" id="mics">' + htmlMics() + '</div>' +
+          '<div class="canales" id="canales">' + htmlCanales() + '</div>' +
+          '<div class="nota" id="nota-vincha" hidden>Las vinchas y los micrófonos de mano comparten los mismos ' + cfg.canalesInalambricos + ' inalámbricos: cada vincha es un micrófono de mano menos.</div></div>' +
+        segmentado('alambricos', '¿Necesitan micrófonos con cable?', ['Sí', 'No']) +
+        '<div class="anidado" id="b-cable" hidden><div class="equipos" id="cable">' + stepper('cable', 'Micrófonos con cable', '¿Cuántos?', E.cant.cable, limitesMics().cable) + '</div></div>' +
+        '<div class="campo" data-campo="pies"><span class="preg-tit">Pies de micrófono</span>' +
+          '<div class="equipos" id="pies">' + stepper('pie', 'Pies de micrófono', 'Para micrófonos inalámbricos o con cable', E.cant.pie, limitesMics().pie) + '</div></div>' +
+      '</div>' +
+    '</section>' +
+
+    // PASO 4
+    '<section class="paso" data-n="4" hidden>' + titulo(4) +
+      '<div class="nota" id="nota-sin-teles" hidden>En este espacio no hay teles.</div>' +
+      '<div id="b-teles-preg" style="display:flex;flex-direction:column;gap:22px">' +
+      segmentado('teles', '¿Van a usar las teles?', ['Sí', 'No']) +
+      '<div class="anidado" id="b-teles" hidden>' +
+        tarjetas('cantidadTeles', '¿Cuáles?', [
+          { v: '1', t: 'Solo la del medio', d: 'La tele que va sobre el escenario' },
+          { v: '2', t: '2 teles', d: 'Las dos fijas de los costados' },
+          { v: '3', t: '3 teles', d: 'Las dos de los costados y una sobre el escenario' }
+        ], true) +
+        '<div id="b-misma">' + segmentado('mismaImagen', '¿Todas muestran la misma imagen?', ['Sí', 'No']) + '</div>' +
+        '<div class="nota" id="nota-imagenes" hidden>Como cada tele muestra algo distinto, poné en el nombre de cada archivo en qué tele va. Por ejemplo: “Tele izquierda – fotos.mp4”, “Tele derecha – video.mp4”<span id="nota-tele3">, “Tele escenario – presentación.pptx”</span>.</div>' +
+      '</div></div>' +
+      '<div id="b-compu" hidden style="display:flex;flex-direction:column;gap:16px">' +
+        tarjetas('computadora', '¿Qué computadora van a usar?', [
+          { v: 'Lleva la suya', t: 'Llevamos nuestra notebook' },
+          { v: 'Notebook del colegio', t: 'Necesitamos una notebook del colegio' },
+          { v: 'No necesita', t: 'No vamos a usar computadora' }
+        ], true) +
+        '<div class="nota" id="nota-propia" hidden>Te pedimos que lleves <strong>todos los archivos ya descargados</strong> en la notebook o en un pendrive, para no depender de internet el día del acto.</div>' +
+        '<div id="b-archivos" hidden style="display:flex;flex-direction:column;gap:12px">' +
+          '<div class="nota">Podés hacernos llegar la música, los videos o las imágenes de tres formas:<ul>' +
+            '<li>Adjuntándolos acá abajo.</li>' +
+            '<li>Mandándonoslos por mail a ' + mail() + '.</li>' +
+            '<li>Trayéndolos en un pendrive el día del acto.</li></ul>' +
+            '<strong>Ponele a cada archivo un nombre que diga qué es</strong> y, si podés, numeralos en el orden en que se usan: “01 Himno Nacional.mp3”, “02 Video de egresados.mp4”.</div>' +
+          '<div class="adjuntar" data-campo="archivos">' +
+            '<span class="adj-tit">Adjuntá los archivos que se van a usar en el acto</span>' +
+            '<label class="btn btn-adj">' + ICONOS.clip + 'Elegir archivos<input type="file" id="archivos" class="solo-lector" multiple accept="' + esc(ext) + '"></label>' +
+            '<span class="ayuda">Hasta ' + cfg.archivosMax + ' archivos de ' + cfg.archivoMaxMB + ' MB cada uno. Los videos muy pesados, mejor por mail o pendrive.</span>' +
+            '<p class="aviso" id="aviso-archivos" role="alert"></p>' +
+            '<ul class="archivos" id="lista-archivos"></ul></div>' +
+        '</div>' +
+      '</div>' +
+    '</section>' +
+
+    // PASO 5
+    '<section class="paso" data-n="5" hidden>' + titulo(5) +
+      '<div class="campo" data-campo="observaciones"><label for="obs">¿Necesitás algo más? <span class="opc">(opcional)</span></label>' +
+        '<textarea id="obs" maxlength="500" placeholder="Cualquier cosa que necesites y no esté en los pasos anteriores."></textarea></div>' +
+      '<p class="contacto">¿Dudas? Escribinos a ' + mail() + '</p>' +
+    '</section>' +
+
+    '<div class="trampa" aria-hidden="true"><label for="sitio">No completar</label><input type="text" id="sitio" tabindex="-1" autocomplete="off"></div>' +
+    '<div class="barra-inf"><div class="msj msj-error" id="msj" role="alert"></div>' +
+      '<div class="botones"><button type="button" class="btn btn-sec" id="atras" data-accion="atras">Atrás</button>' +
+      '<button type="submit" class="btn btn-pri" id="enviar">Siguiente</button></div></div>' +
+    '</form>' +
+    '<div class="mq-fondo" id="mq-fondo" data-accion="cerrar-mq" hidden></div>' +
+    '<aside class="mq-panel" id="mq-panel" aria-label="Maqueta del espacio">' +
+      '<div class="mq-cab"><strong>Maqueta del espacio</strong>' +
+        '<button type="button" class="cerrar-mq" data-accion="cerrar-mq" aria-label="Cerrar maqueta">×</button></div>' +
+      '<div class="maqueta" data-mq></div>' +
+      '<p class="ayuda">Se arma sola con lo que vas eligiendo. Es una referencia del espacio, no un plano exacto.</p>' +
+    '</aside>';
+}
+
+function filaResumen(t, v) { return '<li><span>' + esc(t) + '</span><b>' + esc(v) + '</b></li>'; }
+function vistaOk() {
+  const r = E.resultado, d = r.datos;
+  const ev = eventoActual();
+  let montaje = filaResumen('Lugar', d.lugar);
+  if (d.bancos) montaje += filaResumen('Bancos', d.bancos);
+  if (!esSala(d.lugar)) montaje += filaResumen('Escenario', textoEscenario(d.escenario) || 'No');
+  if (d.escenarioAdicional === 'Sí') montaje += filaResumen('Escenario adicional', 'A la ' + d.posicion.toLowerCase() + ' · ' + TARIMAS_POR_LATERAL + ' tarimas');
+  if (d.estrado === 'Sí') montaje += filaResumen('Atril', 'Sí');
+  if (textoSillas(d)) montaje += filaResumen('Sillas', (d.cantidadSillas || '') + (d.sillas === 'Docentes y directivos' ? ' · docentes y directivos' : d.sillas === 'Público' ? ' · público' : ''));
+  if (d.telones === 'Sí') montaje += filaResumen('Telones', 'Sí');
+  if (d.alfombra === 'Sí') montaje += filaResumen('Alfombra', 'Sí');
+  if (textoGradas(d.gradas)) montaje += filaResumen('Gradas', d.gradas === 'Madera' ? 'De madera' : d.gradas === 'Metal' ? 'De metal' : 'Sí');
+  let sonido = filaResumen('Tipo', d.sonido === 'No necesita' ? 'Sin sonido' : 'Sonido ' + d.sonido.toLowerCase());
+  if (d.sonido !== 'No necesita') {
+    if (d.inalambricos) sonido += filaResumen('Micrófonos inalámbricos', d.inalambricos);
+    if (d.vinchas) sonido += filaResumen('Vinchas', d.vinchas);
+    if (d.alambricos === 'Sí') sonido += filaResumen('Micrófonos con cable', d.cantidadAlambricos);
+    if (d.pies) sonido += filaResumen('Pies de micrófono', d.pies);
+  }
+  let pantallas = esSala(d.lugar) ? '' : filaResumen('Teles', d.teles === 'Sí' ? textoTeles(d.cantidadTeles) + (d.cantidadTeles === '1' ? '' : d.mismaImagen === 'Sí' ? ', misma imagen' : ', imágenes distintas') : 'No');
+  if (d.computadora) pantallas += filaResumen('Computadora', { 'Lleva la suya': 'Llevan la suya', 'Notebook del colegio': 'Notebook del colegio', 'No necesita': 'No' }[d.computadora]);
+  const subidos = r.subidos.length ? '<p class="resumen-tit">Archivos recibidos</p><ul class="resumen">' + r.subidos.map(function (n) { return '<li><span>' + esc(n) + '</span><b>Recibido</b></li>'; }).join('') + '</ul>' : '';
+  const fallas = r.fallidos.length ? '<div class="falla"><strong>Estos archivos no se pudieron adjuntar:</strong><ul>' +
+    r.fallidos.map(function (f) { return '<li>' + esc(f.nombre) + (f.motivo ? ' — ' + esc(f.motivo) : '') + '</li>'; }).join('') +
+    '</ul>Mandánoslos por mail a ' + esc(E.cfg.emailContacto) + ' o traelos en un pendrive. El pedido sí quedó registrado.</div>' : '';
+  return '<div class="ok-cab"><h1>Pedido enviado</h1><span class="pill pill-ok">' + ICONOS.ok + 'Registrado</span></div>' +
+    '<p class="bajada">Quedó registrado para <strong>' + esc(ev ? ev.nombre : '') + '</strong>. Código de pedido: <span class="codigo">' + esc(r.codigo) + '</span></p>' +
+    fallas +
+    '<div class="maqueta" style="margin-top:16px">' + maquetaSVG(mqDe([d], d.lugar)) + '</div>' +
+    '<div class="ficha"><p class="resumen-tit">Montaje</p><ul class="resumen">' + montaje + '</ul>' +
+      '<p class="resumen-tit">Sonido</p><ul class="resumen">' + sonido + '</ul>' +
+      '<p class="resumen-tit">Pantallas y computadora</p><ul class="resumen">' + pantallas + '</ul>' + subidos + '</div>' +
+    '<button type="button" class="btn btn-pri" data-accion="ir" data-vista="eventos">Volver a los eventos</button>' +
+    '<button type="button" class="btn btn-sec" data-accion="otro">Hacer otro pedido para este evento</button>' + pie();
+}
+
+function render() {
+  const vistas = { cargando: vistaCargando, error: vistaError, eventos: vistaEventos, evento: vistaEvento, form: vistaForm, ok: vistaOk,
+    'armado-lista': vistaArmadoLista, 'armado-evento': vistaArmadoEvento };
+  $main.innerHTML = vistas[E.vista]();
+  document.body.classList.toggle('en-form', E.vista === 'form');
+  E.mqPrevio = null;
+  if (E.vista === 'form') { condicionales(); irPaso(E.paso); }
+  else window.scrollTo(0, 0);
+}
+
+/* ───────── Lógica del formulario ───────── */
+function valor(nombre) {
+  const el = document.querySelector('input[name="' + nombre + '"]:checked');
+  return el ? el.value : '';
+}
+function esSala(lugar) { return ((E.cfg && E.cfg.lugaresSala) || ['Templo', 'Casa congregacional']).indexOf(lugar) >= 0; }
+function esTemplo(lugar) { return lugar === ((E.cfg && E.cfg.lugarConBancos) || 'Templo'); }
+function conSonido() { return valor('sonido') !== '' && valor('sonido') !== 'No necesita'; }
+function conTeles() { return !esSala(valor('lugar')) && valor('teles') === 'Sí'; }
+function necesitaCompu() { return conSonido() || conTeles(); }
+function ver(id, si) { const el = document.getElementById(id); if (el) el.hidden = !si; }
+function verCampo(campo, si) { const el = document.querySelector('[data-campo="' + campo + '"]'); if (el) el.hidden = !si; }
+
+function condicionales() {
+  const lugar = valor('lugar'), sala = esSala(lugar), templo = esTemplo(lugar);
+  const conEsc = !sala && valor('escenario') === 'Sí';
+  const gym = lugar === E.cfg.lugarConEscenarioAdicional && conEsc && valor('tamEscenario') === 'Completo';
+  ver('b-bancos', templo);
+  ver('b-escenario', !sala);
+  ver('b-tam-esc', conEsc);
+  ver('b-adicional', gym);
+  ver('b-posicion', gym && valor('escenarioAdicional') === 'Sí');
+  ['telones', 'alfombra', 'gradas'].forEach(function (k) { verCampo(k, !sala); });
+  ver('b-gradas', !sala && valor('gradas') === 'Sí');
+  verCampo('sillas', !templo);
+  ver('b-sillas', !templo && valor('sillas') === 'Sí');
+  ver('b-tipo-sillas', !sala);
+  // En las salas no hay sonido completo ni teles
+  const completo = document.querySelector('input[name="sonido"][value="Completo"]');
+  if (completo) { completo.closest('label').hidden = sala; if (sala && completo.checked) completo.checked = false; }
+  ver('nota-sin-teles', sala);
+  ver('b-teles-preg', !sala);
+  document.getElementById('b-sonido').hidden = !conSonido();
+  document.getElementById('b-cable').hidden = valor('alambricos') !== 'Sí';
+  document.getElementById('nota-vincha').hidden = E.cant.vinch === 0;
+  const teles = conTeles(), una = valor('cantidadTeles') === '1';
+  document.getElementById('b-teles').hidden = !teles;
+  ver('b-misma', !una);
+  document.getElementById('nota-imagenes').hidden = !(teles && !una && valor('mismaImagen') === 'No');
+  document.getElementById('nota-tele3').hidden = valor('cantidadTeles') !== '3';
+  const compu = valor('computadora');
+  document.getElementById('b-compu').hidden = !necesitaCompu();
+  document.getElementById('nota-propia').hidden = !(necesitaCompu() && compu === 'Lleva la suya');
+  document.getElementById('b-archivos').hidden = !(necesitaCompu() && compu === 'Notebook del colegio');
+  actualizarMaqueta();
+}
+function actualizarMaqueta() {
+  const d = recolectar();
+  const svg = maquetaSVG(mqDe([d], d.lugar || (eventoActual() || {}).lugar));
+  document.querySelectorAll('[data-mq]').forEach(function (el) { el.innerHTML = svg; });
+  // Si cambió y el panel está cerrado, el botón "Ver maqueta" late una vez.
+  const btn = document.querySelector('.btn-mq'), panel = document.getElementById('mq-panel');
+  if (E.mqPrevio && E.mqPrevio !== svg && btn && !panel.classList.contains('abierto')) {
+    btn.classList.remove('pulso'); void btn.offsetWidth; btn.classList.add('pulso');
+  }
+  E.mqPrevio = svg;
+}
+function abrirMaqueta(abrir) {
+  const panel = document.getElementById('mq-panel');
+  if (!panel) return;
+  panel.classList.toggle('abierto', abrir);
+  document.getElementById('mq-fondo').hidden = !abrir;
+  const btn = document.querySelector('.btn-mq');
+  if (btn) btn.setAttribute('aria-expanded', String(abrir));
+  if (abrir) panel.querySelector('.cerrar-mq').focus();
+  else if (btn) btn.focus();
+}
+
+function irPaso(n) {
+  E.paso = n;
+  document.querySelectorAll('.paso').forEach(function (s) { s.hidden = +s.dataset.n !== n; });
+  document.getElementById('paso-n').textContent = 'Paso ' + n + ' de ' + PASOS.length;
+  document.querySelectorAll('.progreso i').forEach(function (b, i) { b.className = i < n ? 'hecho' : ''; });
+  document.getElementById('atras').hidden = n === 1;
+  document.getElementById('enviar').textContent = n === PASOS.length ? 'Enviar pedido' : 'Siguiente';
+  document.getElementById('msj').textContent = '';
+  window.scrollTo(0, 0);
+  const h = document.querySelector('.paso[data-n="' + n + '"] h2');
+  if (h) h.focus({ preventScroll: true });
+}
+
+function nuevoFormulario() { E.cant = { inal: 0, vinch: 0, cable: 1, pie: 0 }; E.archivos = []; E.paso = 1; }
+
+function renderArchivos() {
+  document.getElementById('lista-archivos').innerHTML = E.archivos.map(function (f, i) {
+    return '<li><span class="arch-nombre">' + esc(f.name) + '</span><span class="arch-peso">' + megas(f.size) + '</span>' +
+      '<button type="button" class="quitar" data-accion="quitar-archivo" data-i="' + i + '" aria-label="Quitar ' + esc(f.name) + '">Quitar</button></li>';
+  }).join('');
+}
+function agregarArchivos(lista) {
+  const avisos = [];
+  Array.prototype.forEach.call(lista, function (f) {
+    const ext = (f.name.split('.').pop() || '').toLowerCase();
+    if (E.archivos.length >= E.cfg.archivosMax) { avisos.push('Máximo ' + E.cfg.archivosMax + ' archivos: “' + f.name + '” no se agregó.'); return; }
+    if (E.cfg.extensiones.indexOf(ext) < 0) { avisos.push('“' + f.name + '” no es un tipo de archivo permitido.'); return; }
+    if (f.size > E.cfg.archivoMaxMB * 1048576) { avisos.push('“' + f.name + '” pesa ' + megas(f.size) + ' (máximo ' + E.cfg.archivoMaxMB + ' MB). Mandánoslo por mail o traelo en un pendrive.'); return; }
+    if (E.archivos.some(function (x) { return x.name === f.name && x.size === f.size; })) return;
+    E.archivos.push(f);
+  });
+  document.getElementById('aviso-archivos').textContent = avisos.join(' ');
+  renderArchivos();
+}
+function leerBase64(f) {
+  return new Promise(function (ok, mal) {
+    const r = new FileReader();
+    r.onload = function () { ok(String(r.result).split(',')[1] || ''); };
+    r.onerror = function () { mal(new Error('No se pudo leer el archivo.')); };
+    r.readAsDataURL(f);
+  });
+}
+
+function numeroSillas() {
+  const t = document.getElementById('cantidadSillas').value.trim();
+  return /^\d{1,4}$/.test(t) ? Number(t) : 0;
+}
+function recolectar() {
+  const lugar = valor('lugar'), sala = esSala(lugar), templo = esTemplo(lugar);
+  const d = {
+    nombre: document.getElementById('nombre').value.trim(),
+    departamento: document.getElementById('depto').value.trim(),
+    actividad: document.getElementById('actividad').value.trim(),
+    lugar: lugar, escenario: '',
+    escenarioAdicional: '', posicion: '',
+    telones: '', alfombra: '', estrado: valor('estrado'), gradas: '', sillas: '', cantidadSillas: '', bancos: '',
+    obsMontaje: document.getElementById('obsMontaje').value.trim(),
+    sonido: valor('sonido'),
+    inalambricos: 0, vinchas: 0, alambricos: '', cantidadAlambricos: 0, pies: 0,
+    teles: sala ? 'No' : valor('teles'), cantidadTeles: '', mismaImagen: '',
+    computadora: '',
+    observaciones: document.getElementById('obs').value.trim()
+  };
+  if (!sala) {
+    const esc_ = valor('escenario');
+    d.escenario = esc_ === 'Sí' ? valor('tamEscenario') : esc_;
+    if (lugar === E.cfg.lugarConEscenarioAdicional && d.escenario === 'Completo') {
+      d.escenarioAdicional = valor('escenarioAdicional');
+      if (d.escenarioAdicional === 'Sí') d.posicion = valor('posicion');
+    }
+    d.telones = valor('telones'); d.alfombra = valor('alfombra');
+    d.gradas = valor('gradas') === 'Sí' ? valor('tipoGradas') : valor('gradas');
+  }
+  if (templo) d.bancos = valor('bancos');
+  else {
+    const si = valor('sillas');
+    d.sillas = si === 'Sí' ? (sala ? 'Sí' : valor('tipoSillas')) : si;
+    if (si === 'Sí') d.cantidadSillas = numeroSillas() || '';
+  }
+  if (conSonido()) {
+    d.inalambricos = E.cant.inal; d.vinchas = E.cant.vinch;
+    d.alambricos = valor('alambricos');
+    if (d.alambricos === 'Sí') d.cantidadAlambricos = E.cant.cable;
+    d.pies = E.cant.pie;
+  }
+  if (d.teles === 'Sí') {
+    d.cantidadTeles = valor('cantidadTeles');
+    d.mismaImagen = d.cantidadTeles === '1' ? 'Sí' : valor('mismaImagen');
+  }
+  if (necesitaCompu()) d.computadora = valor('computadora');
+  return d;
+}
+function problemas(d, hastaPaso) {
+  const sala = esSala(d.lugar), templo = esTemplo(d.lugar);
+  const conEsc = !sala && valor('escenario') === 'Sí';
+  const gym = d.lugar === E.cfg.lugarConEscenarioAdicional && d.escenario === 'Completo';
+  const sillasSi = !templo && valor('sillas') === 'Sí';
+  const reglas = [
+    [1, 'nombre', d.nombre.length < 3, 'Ingresá tu nombre y apellido.'],
+    [1, 'departamento', !d.departamento, 'Indicá tu departamento o área.'],
+    [1, 'actividad', d.actividad.length < 10, 'Contanos brevemente de qué se trata la actividad.'],
+    [2, 'lugar', !d.lugar, 'Elegí dónde es.'],
+    [2, 'bancos', templo && !d.bancos, 'Indicá qué hacemos con los bancos.'],
+    [2, 'escenario', !sala && !valor('escenario'), 'Indicá si usan escenario.'],
+    [2, 'tamEscenario', conEsc && !valor('tamEscenario'), 'Elegí si es el escenario completo o medio escenario.'],
+    [2, 'escenarioAdicional', gym && !d.escenarioAdicional, 'Indicá si necesitan escenario adicional.'],
+    [2, 'posicion', gym && d.escenarioAdicional === 'Sí' && !d.posicion, 'Elegí de qué lado va el escenario adicional.'],
+    [2, 'estrado', !d.estrado, 'Indicá si necesitan atril.'],
+    [2, 'sillas', !templo && !valor('sillas'), 'Indicá si necesitan sillas.'],
+    [2, 'tipoSillas', sillasSi && !sala && !valor('tipoSillas'), 'Elegí para quién son las sillas.'],
+    [2, 'cantidadSillas', sillasSi && !numeroSillas(), 'Indicá cuántas sillas, con un número.'],
+    [2, 'telones', !sala && !d.telones, 'Indicá si necesitan telones.'],
+    [2, 'alfombra', !sala && !d.alfombra, 'Indicá si necesitan alfombra.'],
+    [2, 'gradas', !sala && !valor('gradas'), 'Indicá si necesitan gradas.'],
+    [2, 'tipoGradas', !sala && valor('gradas') === 'Sí' && !valor('tipoGradas'), 'Elegí si las gradas son de madera o de metal.'],
+    [3, 'sonido', !d.sonido, 'Elegí qué sonido necesitan.'],
+    [3, 'alambricos', conSonido() && !d.alambricos, 'Indicá si necesitan micrófonos con cable.'],
+    [4, 'teles', !sala && !d.teles, 'Indicá si van a usar las teles.'],
+    [4, 'cantidadTeles', d.teles === 'Sí' && !d.cantidadTeles, 'Elegí qué teles van a usar.'],
+    [4, 'mismaImagen', d.teles === 'Sí' && !d.mismaImagen, 'Indicá si todas las teles muestran la misma imagen.'],
+    [4, 'computadora', necesitaCompu() && !d.computadora, 'Indicá qué computadora van a usar.']
+  ];
+  for (let i = 0; i < reglas.length; i++) {
+    if (reglas[i][0] <= hastaPaso && reglas[i][2]) return { paso: reglas[i][0], campo: reglas[i][1], mensaje: reglas[i][3] };
+  }
+  return null;
+}
+function limpiarErrores() {
+  document.querySelectorAll('.con-error').forEach(function (el) { el.classList.remove('con-error'); });
+  document.querySelectorAll('.err').forEach(function (el) { el.remove(); });
+}
+function marcarError(p) {
+  if (p.paso !== E.paso) irPaso(p.paso);
+  const el = document.querySelector('[data-campo="' + p.campo + '"]');
+  document.getElementById('msj').textContent = p.mensaje;
+  if (!el) return;
+  el.classList.add('con-error');
+  const err = document.createElement('p');
+  err.className = 'err'; err.textContent = p.mensaje;
+  el.appendChild(err);
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  const foco = el.querySelector('input,textarea');
+  if (foco) setTimeout(function () { foco.focus({ preventScroll: true }); }, 300);
+}
+function sacarError(campo) {
+  if (!campo || !campo.classList.contains('con-error')) return;
+  campo.classList.remove('con-error');
+  const err = campo.querySelector('.err'); if (err) err.remove();
+  document.getElementById('msj').textContent = '';
+}
+
+/* ───────── Eventos ───────── */
+$main.addEventListener('click', function (e) {
+  const b = e.target.closest('[data-accion]');
+  if (!b) return;
+  const a = b.dataset.accion;
+  if (a === 'abrir') { E.eventoId = b.dataset.id; E.vista = 'evento'; render(); }
+  else if (a === 'abrir-armado') { E.eventoId = b.dataset.id; E.vista = 'armado-evento'; render(); }
+  else if (a === 'ir') { if (b.dataset.vista === 'form') nuevoFormulario(); E.vista = b.dataset.vista; render(); }
+  else if (a === 'otro') { nuevoFormulario(); E.vista = 'form'; render(); }
+  else if (a === 'reintentar') { if (E.modo === 'armado') cargarArmado(); else cargar(); }
+  else if (a === 'abrir-mq') abrirMaqueta(true);
+  else if (a === 'cerrar-mq') abrirMaqueta(false);
+  else if (a === 'atras') { limpiarErrores(); irPaso(Math.max(1, E.paso - 1)); }
+  else if (a === 'quitar-archivo') { E.archivos.splice(+b.dataset.i, 1); renderArchivos(); }
+  else if (a === 'mas' || a === 'menos') {
+    const id = b.closest('[data-paso-ctl]').dataset.pasoCtl;
+    const l = limitesMics();
+    const min = id === 'cable' ? 1 : 0;
+    E.cant[id] = Math.max(min, Math.min(l[id], (E.cant[id] || 0) + (a === 'mas' ? 1 : -1)));
+    if (id === 'cable') document.getElementById('cable').innerHTML = stepper('cable', 'Micrófonos con cable', '¿Cuántos?', E.cant.cable, limitesMics().cable);
+    else if (id === 'pie') document.getElementById('pies').innerHTML = stepper('pie', 'Pies de micrófono', 'Para micrófonos inalámbricos o con cable', E.cant.pie, limitesMics().pie);
+    else actualizarMics();
+    const nuevo = document.querySelector('[data-paso-ctl="' + id + '"] [data-accion="' + a + '"]');
+    if (nuevo && !nuevo.disabled) nuevo.focus();
+  }
+});
+
+$main.addEventListener('change', function (e) {
+  if (e.target.id === 'archivos') { agregarArchivos(e.target.files); e.target.value = ''; return; }
+  sacarError(e.target.closest('[data-campo]'));
+  if (E.vista === 'form') condicionales();
+});
+$main.addEventListener('input', function (e) {
+  sacarError(e.target.closest('[data-campo]'));
+  if (e.target.id === 'cantidadSillas') actualizarMaqueta();
+});
+
+$main.addEventListener('submit', function (e) {
+  e.preventDefault();
+  if (e.target.classList.contains('nuevo-msg')) { enviarMensaje(e.target); return; }
+  limpiarErrores();
+  const d = recolectar();
+
+  // Pasos intermedios: validar y avanzar.
+  if (E.paso < PASOS.length) {
+    const p = problemas(d, E.paso);
+    if (p) { marcarError(p); return; }
+    irPaso(E.paso + 1);
+    return;
+  }
+
+  const p = problemas(d, PASOS.length);
+  if (p) { marcarError(p); return; }
+
+  const msj = document.getElementById('msj');
+  const btn = document.getElementById('enviar');
+  const atras = document.getElementById('atras');
+  msj.textContent = '';
+  btn.disabled = true; atras.disabled = true;
+  btn.innerHTML = '<span class="giro" aria-hidden="true"></span> Enviando…';
+  guardarLocal('nombre', d.nombre); guardarLocal('depto', d.departamento);
+
+  const conArchivos = d.computadora === 'Notebook del colegio' ? E.archivos.slice() : [];
+  const envio = Object.assign({}, d, { token: E.token, eventoId: E.eventoId, cantidadArchivos: conArchivos.length, sitioWeb: document.getElementById('sitio').value });
+
+  llamar('enviarSolicitud', envio).then(function (r) {
+    if (r.token) E.token = r.token;
+    if (!r.ok) throw new Error(r.mensaje);
+    const resultado = { codigo: r.codigo, datos: d, subidos: [], fallidos: [] };
+    if (!conArchivos.length) return resultado;
+    if (!r.ticket) { resultado.fallidos = conArchivos.map(function (f) { return { nombre: f.name, motivo: '' }; }); return resultado; }
+    return conArchivos.reduce(function (cadena, f, i) {
+      return cadena.then(function () {
+        btn.innerHTML = '<span class="giro" aria-hidden="true"></span> Subiendo archivo ' + (i + 1) + ' de ' + conArchivos.length + '…';
+        return leerBase64(f)
+          .then(function (b64) { return llamar('subirArchivo', { ticket: r.ticket, nombre: f.name, tipo: f.type, base64: b64 }); })
+          .then(function (res) { if (res && res.ok) resultado.subidos.push(f.name); else resultado.fallidos.push({ nombre: f.name, motivo: res && res.mensaje }); })
+          .catch(function (err) { resultado.fallidos.push({ nombre: f.name, motivo: err && err.message }); });
+      });
+    }, Promise.resolve()).then(function () { return resultado; });
+  }).then(function (resultado) {
+    E.resultado = resultado; E.vista = 'ok'; render();
+  }).catch(function (err) {
+    msj.textContent = (err && err.message) || 'No se pudo enviar. Revisá tu conexión e intentá de nuevo.';
+    btn.disabled = false; atras.disabled = false; btn.textContent = 'Enviar pedido';
+  });
+});
+
+function cargar() {
+  E.vista = 'cargando'; render();
+  llamar('obtenerDatosIniciales').then(function (d) {
+    E.eventos = d.eventos; E.cfg = d.config; E.token = d.token; revisarVersion(d.version);
+    E.vista = 'eventos'; render();
+  }).catch(function (err) {
+    E.error = err && err.message ? err.message : ''; E.vista = 'error'; render();
+  });
+}
+
+/* ───────── Vista del equipo de armado (enlace con ?vista=armado) ───────── */
+function encabezadoArmado() {
+  return '<header class="top"><h1>Armado de los próximos actos</h1><p class="bajada">Lo confirmado para cada acto. En cada pedido podés dejar mensajes.</p></header>';
+}
+function eventoArmado() { return E.armado.eventos.filter(function (e) { return e.id === E.eventoId; })[0]; }
+
+function vistaArmadoLista() {
+  const evs = E.armado.eventos;
+  if (!evs.length) return encabezadoArmado() + '<div class="vacio">No hay actos próximos.</div>' + pie();
+  return encabezadoArmado() + '<div class="lista">' + evs.map(function (ev) {
+    const d = aFecha(ev.fecha);
+    const sub = [ev.hora, ev.lugar].filter(Boolean).join(' · ');
+    const n = ev.pedidos.length;
+    return '<button type="button" class="evento" data-accion="abrir-armado" data-id="' + esc(ev.id) + '">' +
+      '<span class="dia">' + (d ? '<b>' + d.getDate() + '</b><small>' + MESES[d.getMonth()] + '</small>' : '<small>s/f</small>') + '</span>' +
+      '<span class="ev-info"><strong>' + esc(ev.nombre) + '</strong><span>' + esc(sub ? sub + ' · ' : '') +
+        (n ? n + (n === 1 ? ' pedido confirmado' : ' pedidos confirmados') : 'sin pedidos confirmados') + '</span></span>' +
+      ICONOS.chev + '</button>';
+  }).join('') + '</div>' + pie();
+}
+
+function resumenArmado(pedidos) {
+  const filas = [];
+  const hay = function (k, v) { return pedidos.some(function (p) { return p[k] === (v || 'Sí'); }); };
+  const lugares = pedidos.map(function (p) { return p.lugar; }).filter(function (l, i, a) { return l && a.indexOf(l) === i; });
+  if (lugares.length) filas.push(['Lugar', lugares.join(', ')]);
+  const montaje = [];
+  pedidos.forEach(function (p) { montajeLista(p).forEach(function (x) { if (montaje.indexOf(x) < 0) montaje.push(x); }); });
+  filas.push(['Montaje', montaje.length ? montaje.join(', ') : 'Nada']);
+  const sonido = [];
+  if (hay('sonido', 'Completo')) sonido.push('Completo');
+  if (hay('sonido', 'Pequeño')) sonido.push('Pequeño');
+  filas.push(['Sonido', sonido.length ? sonido.join(' y ') : 'No']);
+  const tot = {}, orden = [];
+  pedidos.forEach(function (p) { p.items.forEach(function (it) { if (!(it.equipo in tot)) { tot[it.equipo] = 0; orden.push(it.equipo); } tot[it.equipo] += it.cantidad; }); });
+  orden.forEach(function (n) { filas.push([n, String(tot[n])]); });
+  const t = mqDe(pedidos).teles;
+  if (t.fijas || t.movil) filas.push(['Teles', textoTeles(t.fijas && t.movil ? '3' : t.fijas ? '2' : '1') + (hay('mismaImagen', 'No') ? ', con imágenes distintas' : '')]);
+  if (hay('computadora', 'Notebook del colegio')) filas.push(['Notebook del colegio', 'Sí']);
+  return '<ul class="resumen">' + filas.map(function (f) { return filaResumen(f[0], f[1]); }).join('') + '</ul>';
+}
+
+function htmlMensajes(lista) {
+  if (!lista.length) return '<li class="sin-msg">Todavía no hay mensajes.</li>';
+  return lista.map(function (m) {
+    return '<li class="msg' + (m.origen === 'supervisor' ? ' msg-supervisor' : '') + '"><div class="msg-cab"><strong>' + esc(m.autor) + '</strong><span>' + esc(m.fecha) + '</span></div>' +
+      '<p>' + esc(m.texto) + '</p></li>';
+  }).join('');
+}
+
+function tarjetaPedidoArmado(p) {
+  const fila = function (dt, dd) { return dd ? '<dt>' + dt + '</dt><dd>' + dd + '</dd>' : ''; };
+  const chips = function (l) { return l.length ? '<ul class="chips">' + l.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : ''; };
+  const montaje = montajeLista(p);
+  const compu = { 'Lleva la suya': 'Llevan su notebook', 'Notebook del colegio': 'Notebook del colegio', 'No necesita': 'No usan' };
+  const id = esc(p.id);
+  return '<article class="pedido">' +
+    '<div class="pedido-cab"><strong>' + esc(p.departamento) + '</strong><span>' + esc(p.solicitante) + ' · #' + esc(p.codigo) + '</span></div>' +
+    (p.actividad ? '<p>' + esc(p.actividad) + '</p>' : '') +
+    '<dl class="datos">' +
+      fila('Lugar', esc(p.lugar)) +
+      fila('Montaje', montaje.length ? chips(montaje) : '<span class="ayuda">Nada</span>') +
+      fila('Notas de montaje', p.obsMontaje ? '<span style="white-space:pre-line">' + esc(p.obsMontaje) + '</span>' : '') +
+      fila('Sonido', esc(p.sonido === 'No necesita' ? 'No necesita' : p.sonido)) +
+      fila('Equipos', chips(p.items.map(function (it) { return it.cantidad + ' × ' + it.equipo.toLowerCase(); }))) +
+      fila('Teles', p.teles === 'Sí' ? esc(textoTeles(p.cantidadTeles) + (p.cantidadTeles === '1' ? '' : p.mismaImagen === 'No' ? ', imágenes distintas' : ', misma imagen')) : '') +
+      fila('Computadora', p.computadora ? esc(compu[p.computadora] || p.computadora) : '') +
+      fila('Otras necesidades', p.observaciones ? '<span style="white-space:pre-line">' + esc(p.observaciones) + '</span>' : '') +
+    '</dl>' +
+    '<div class="hilo"><p class="resumen-tit">Mensajes</p>' +
+      '<ul class="mensajes" id="msgs-' + id + '">' + htmlMensajes(p.mensajes) + '</ul>' +
+      '<form class="nuevo-msg" data-sol="' + id + '" novalidate>' +
+        '<label class="solo-lector" for="autor-' + id + '">Tu nombre</label>' +
+        '<input type="text" id="autor-' + id + '" class="msg-autor" placeholder="Tu nombre" maxlength="40" value="' + esc(leerLocal('autor')) + '">' +
+        '<label class="solo-lector" for="texto-' + id + '">Mensaje</label>' +
+        '<textarea id="texto-' + id + '" class="msg-texto" maxlength="1000" placeholder="Escribí un mensaje…"></textarea>' +
+        '<button type="submit" class="btn btn-pri btn-msg">Enviar mensaje</button>' +
+        '<p class="aviso" role="alert"></p></form></div>' +
+  '</article>';
+}
+
+function vistaArmadoEvento() {
+  const ev = eventoArmado();
+  if (!ev) { E.vista = 'armado-lista'; return vistaArmadoLista(); }
+  const meta = [fechaLarga(ev.fecha), ev.hora ? ev.hora + ' h' : '', ev.lugar].filter(Boolean).join(' · ');
+  const cuerpo = !ev.pedidos.length
+    ? '<div class="vacio" style="margin-top:16px">Todavía no hay pedidos confirmados para este acto.</div>'
+    : '<div class="maqueta" style="margin-top:16px">' + maquetaSVG(mqDe(ev.pedidos, ev.lugar)) + '</div>' +
+      '<div class="ficha"><p class="resumen-tit">Todo lo que hay que preparar</p>' + resumenArmado(ev.pedidos) + '</div>' +
+      '<h3 class="seccion-tit">Pedidos (' + ev.pedidos.length + ')</h3>' + ev.pedidos.map(tarjetaPedidoArmado).join('');
+  return '<div style="padding-top:12px">' + volver('armado-lista', 'Actos') + '</div>' +
+    '<h1>' + esc(ev.nombre) + '</h1><p class="bajada">' + esc(meta) + '</p>' + cuerpo + pie();
+}
+
+function cargarArmado() {
+  E.vista = 'cargando'; render();
+  llamar('obtenerArmado').then(function (d) {
+    E.armado = d; E.token = d.token; E.cfg = E.cfg || { emailContacto: d.emailContacto }; revisarVersion(d.version);
+    E.vista = 'armado-lista'; render();
+  }).catch(function (err) {
+    E.error = err && err.message ? err.message : ''; E.vista = 'error'; render();
+  });
+}
+
+function enviarMensaje(form) {
+  const id = form.dataset.sol;
+  const autor = form.querySelector('.msg-autor').value.trim();
+  const texto = form.querySelector('.msg-texto').value.trim();
+  const aviso = form.querySelector('.aviso');
+  const btn = form.querySelector('button');
+  if (autor.length < 2) { aviso.textContent = 'Escribí tu nombre.'; form.querySelector('.msg-autor').focus(); return; }
+  if (!texto) { aviso.textContent = 'Escribí el mensaje.'; form.querySelector('.msg-texto').focus(); return; }
+  aviso.textContent = ''; btn.disabled = true; btn.textContent = 'Enviando…';
+  guardarLocal('autor', autor);
+  llamar('agregarMensaje', { token: E.token, solicitudId: id, autor: autor, texto: texto, sitioWeb: '' }).then(function (r) {
+    if (!r.ok) throw new Error(r.mensaje);
+    const p = eventoArmado().pedidos.filter(function (x) { return x.id === id; })[0];
+    if (p && r.mensaje) { p.mensajes.push(r.mensaje); document.getElementById('msgs-' + id).innerHTML = htmlMensajes(p.mensajes); }
+    form.querySelector('.msg-texto').value = '';
+    btn.disabled = false; btn.textContent = 'Enviar mensaje';
+  }).catch(function (err) {
+    aviso.textContent = (err && err.message) || 'No se pudo enviar.';
+    btn.disabled = false; btn.textContent = 'Enviar mensaje';
+  });
+}
+
+/* ───────── Datos de demostración (solo si abrís este archivo fuera de Google) ───────── */
+const DEMO_API = {
+  obtenerDatosIniciales: function () {
+    return {
+      version: '9',
+      token: 'demo',
+      config: {
+        lugares: ['Gimnasio', 'Patio Primaria', 'Patio Secundaria', 'Comedor', 'Terraza', 'Patio Abierto Primaria', 'Templo', 'Casa congregacional'],
+        lugarConEscenarioAdicional: 'Gimnasio', lugaresSala: ['Templo', 'Casa congregacional'], lugarConBancos: 'Templo', canalesInalambricos: 4, maxVinchas: 2, maxAlambricos: 6,
+        emailContacto: 'actosieavdp@gmail.com', archivoMaxMB: 20, archivosMax: 6, maxPies: 8,
+        extensiones: ['mp3', 'wav', 'm4a', 'mp4', 'mov', 'jpg', 'png', 'pdf', 'pptx']
+      },
+      eventos: [
+        { id: 'e3', nombre: 'Feria de Ciencias', fecha: '2026-11-13', hora: '09:00', lugar: 'Gimnasio', descripcion: '',
+          confirmados: [{ departamento: 'Música', actividad: 'Coro de 2.º grado con piano.', lugar: 'Gimnasio', escenario: 'Sí', escenarioAdicional: 'Sí', posicion: 'Izquierda',
+            telones: 'No', alfombra: 'No', estrado: 'No', gradas: 'Sí', sillas: 'No', sonido: 'Pequeño', teles: 'Sí', cantidadTeles: '2',
+            items: [{ equipo: 'Micrófono inalámbrico', cantidad: 2 }, { equipo: 'Pie de micrófono', cantidad: 2 }] }] },
+        { id: 'e1', nombre: 'Muestra de fin de año', fecha: '2026-11-28', hora: '18:30', lugar: 'Patio Secundaria', descripcion: 'Muestra de las áreas artísticas con presentaciones de cada curso.' },
+        { id: 'e2', nombre: 'Acto de egresados', fecha: '2026-12-11', hora: '10:00', lugar: 'Patio Primaria', descripcion: 'Entrega de diplomas y palabras de los egresados.' }
+      ]
+    };
+  },
+  enviarSolicitud: function () { return { ok: true, codigo: 'A1B2C3', token: 'demo', ticket: 'demo' }; },
+  subirArchivo: function () { return { ok: true }; },
+  obtenerArmado: function () {
+    return { version: '9', token: 'demo', emailContacto: 'actosieavdp@gmail.com', eventos: [
+      { id: 'e3', nombre: 'Feria de Ciencias', fecha: '2027-05-13', hora: '09:00', lugar: 'Gimnasio', descripcion: '', pedidos: [
+        { id: 'p1aa11', codigo: 'P1AA11', solicitante: 'María Gómez', departamento: 'Música', actividad: 'Coro de 2.º grado con piano.', lugar: 'Gimnasio',
+          escenario: 'Sí', escenarioAdicional: 'Sí', posicion: 'Izquierda', telones: 'Sí', alfombra: 'No', estrado: 'Sí', gradas: 'Sí', sillas: 'No',
+          obsMontaje: 'El piano va sobre el escenario lateral.', sonido: 'Pequeño', computadora: 'Lleva la suya', teles: 'Sí', cantidadTeles: '2', mismaImagen: 'Sí',
+          observaciones: '', items: [{ equipo: 'Micrófono inalámbrico', cantidad: 2 }, { equipo: 'Pie de micrófono', cantidad: 2 }],
+          mensajes: [{ autor: 'Supervisor', texto: 'Llevar un alargue extra para el piano.', fecha: '20/10 10:12', origen: 'supervisor' },
+                     { autor: 'Carlos', texto: 'Listo, lo dejo en el depósito del gimnasio.', fecha: '20/10 12:40', origen: 'armado' }] }] },
+      { id: 'e1', nombre: 'Muestra de fin de año', fecha: '2027-11-28', hora: '18:30', lugar: 'Patio Secundaria', descripcion: '', pedidos: [] }
+    ] };
+  },
+  agregarMensaje: function (d) { return { ok: true, mensaje: { autor: d.autor, texto: d.texto, fecha: 'ahora', origen: 'armado' } }; }
+};
+
+if (DEMO) document.getElementById('demo').innerHTML = '<div class="demo">Vista de demostración: los pedidos no se guardan.</div>';
+
+// Con ?vista=armado al final del enlace se abre la vista del equipo de armado.
+// Con ?sitio=1 se adapta para verse dentro de Google Sites.
+function arrancar(param) {
+  if (param.sitio) document.documentElement.classList.add('en-sitio');
+  E.modo = param.vista === 'armado' ? 'armado' : 'docentes';
+  if (E.modo === 'armado') cargarArmado(); else cargar();
+}
+if (EN_GOOGLE) google.script.url.getLocation(function (loc) { arrancar((loc && loc.parameter) || {}); });
+else { const q = new URLSearchParams(location.search); arrancar({ vista: q.get('vista'), sitio: q.get('sitio') }); }
+</script>
+</body>
+</html>
