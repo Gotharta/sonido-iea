@@ -99,7 +99,7 @@
   .campo,.pregunta{display:flex;flex-direction:column;gap:8px}
   .campo>label,.preg-tit{font-weight:500;font-size:14px}
   .opc{font-weight:400;color:var(--muted)}
-  input[type=text],textarea{font:inherit;font-size:16px;width:100%;padding:10px 12px;border:1px solid var(--control);border-radius:var(--radius-control);background:var(--surface);color:var(--text);min-height:44px}
+  input[type=text],input[type=time],textarea{font:inherit;font-size:16px;width:100%;padding:10px 12px;border:1px solid var(--control);border-radius:var(--radius-control);background:var(--surface);color:var(--text);min-height:44px}
   textarea{min-height:96px;resize:vertical}
   input[type=text]:focus,textarea:focus{outline:none;border-color:var(--hue);box-shadow:0 0 0 3px var(--hue-pale)} /* taste-skill-ignore: anillo de foco, no es una sombra en reposo */
   ::placeholder{color:var(--faint)}
@@ -108,6 +108,24 @@
   .opciones{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .opciones.una{grid-template-columns:1fr}
   .opcion{position:relative;display:block}
+  .horario{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .horario input{max-width:150px}
+  .horario span{color:var(--muted)}
+  .cant{padding:2px 0 4px 14px}
+  .cant input{max-width:140px}
+  /* Recorrido: la próxima pregunta se marca, lo ya respondido se aquieta y lo que aparece se nota */
+  .preg-tit,.campo>label{transition:color .2s}
+  .ok>.preg-tit,.campo.ok>label{color:var(--muted)}
+  .siguiente>.preg-tit::before,.campo.siguiente>label::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--hue);margin-right:8px;vertical-align:1px}
+  .grupo-sn>.sn.siguiente{background:var(--hue-pale);margin:0 -16px;padding-left:16px;padding-right:16px;border-radius:6px}
+  .anidado{transition:background .3s,border-color .3s}
+  .anidado.falta{border-left:3px solid var(--hue);background:var(--hue-pale);padding:12px 12px 12px 14px;border-radius:0 var(--radius-card) var(--radius-card) 0}
+  .anidado.falta::before{content:"Nueva pregunta";font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--hue-ink);margin-bottom:-8px}
+  .anidado.listo{border-left-color:var(--rule)}
+  .anidado.aparece{animation:aparece .35s ease-out}
+  @keyframes aparece{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.anidado.aparece{animation:none}}
+  .editando{background:var(--hue-pale);color:var(--hue-ink);border-radius:var(--radius-card);padding:10px 14px;font-size:14px;margin-top:8px}
   .opcion input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
   .opcion span{display:flex;flex-direction:column;justify-content:center;min-height:48px;height:100%;padding:10px 14px;border:1px solid var(--control);border-radius:var(--radius-control);background:var(--surface);font-weight:500;line-height:1.3}
   .opcion small{font-weight:400;color:var(--muted);font-size:13px;margin-top:2px}
@@ -296,7 +314,7 @@ const URL_API = 'https://script.google.com/macros/s/AKfycbzJ6ehxVeQ3vxnGiLr6pxH3
 const EN_GOOGLE = !!(window.google && google.script && google.script.run);
 const CON_API = !EN_GOOGLE && (/^https:\/\/script\.google\.com\//.test(URL_API) || /^http:\/\/localhost/.test(URL_API));
 const DEMO = !EN_GOOGLE && !CON_API;   // abierto suelto: modo demostración
-const VERSION_PAGINA = '10';
+const VERSION_PAGINA = '11';
 function revisarVersion(v) {
   if (v === VERSION_PAGINA) return;
   document.getElementById('demo').innerHTML = '<div class="demo" style="background:var(--error-suave);color:var(--error)">' +
@@ -316,7 +334,6 @@ function llamar(fn, arg) {
 }
 
 /* ───────── Estado ───────── */
-const DURACIONES = ['Menos de 30 min', 'Entre 30 min y 1 hora', 'Entre 1 y 2 horas', 'Entre 2 y 3 horas', 'Más de 3 horas'];
 const BANCOS = ['Como están (mirando al frente)', 'Mirando hacia atrás', 'Otra disposición (aclarar en observaciones)'];
 const PASOS = ['Tus datos', 'Lugar y montaje', 'Sonido', 'Pantallas y computadora', 'Último paso'];
 const E = { vista: 'cargando', eventos: [], cfg: null, token: null, eventoId: null, paso: 1, cant: {}, archivos: [], resultado: null, error: null };
@@ -353,10 +370,15 @@ function textoEscenario(v) {
 function textoGradas(v) {
   return v === 'Madera' ? 'Gradas de madera' : v === 'Metal' ? 'Gradas de metal' : v === 'Sí' ? 'Gradas' : '';
 }
-function textoSillas(s) {
-  if (!s.sillas || s.sillas === 'No') return '';
-  const n = s.cantidadSillas ? s.cantidadSillas + ' sillas' : 'Sillas';
-  return n + (s.sillas === 'Docentes y directivos' ? ' para docentes y directivos' : s.sillas === 'Público' ? ' para el público' : '');
+/** Sillas pedidas, en palabras: pueden ser para el público, para docentes y directivos, o las dos. */
+function textosSillas(s) {
+  if (!s.sillas || s.sillas === 'No') return [];
+  if (s.sillas === 'Docentes y directivos') return [(s.cantidadSillas || '') + ' sillas para docentes y directivos'];
+  if (s.sillas === 'Público') return [(s.cantidadSillas || '') + ' sillas para el público'];
+  const l = [];
+  if (s.cantidadSillas) l.push(s.cantidadSillas + ' sillas' + (s.lugar === 'Casa congregacional' ? '' : ' para el público'));
+  if (s.sillasDocentes) l.push(s.sillasDocentes + ' sillas para docentes y directivos');
+  return l.length ? l : ['Sillas'];
 }
 function textoTeles(c) {
   return { '1': 'Solo la del medio (sobre el escenario)', '2': '2 teles (las de los costados)', '3': '3 teles (una sobre el escenario)' }[String(c)] || (c ? c + ' teles' : '');
@@ -375,11 +397,12 @@ function fechaHoraCorta(v) {
   return DIAS_CORTOS[new Date(+m[1], +m[2] - 1, +m[3]).getDay()] + ' ' + m[3] + '/' + m[2] + ' · ' + m[4] + ':' + m[5] + ' h';
 }
 function montajeLista(s) {
-  return [
-    textoEscenario(s.escenario), textoLateral(s),
-    s.telones === 'Sí' ? 'Telones' : '', s.alfombra === 'Sí' ? 'Alfombra' : '', s.estrado === 'Sí' ? 'Atril' : '',
-    textoGradas(s.gradas), textoSillas(s), s.bancos ? 'Bancos: ' + s.bancos.charAt(0).toLowerCase() + s.bancos.slice(1) : ''
-  ].filter(Boolean);
+  return [textoEscenario(s.escenario), textoLateral(s),
+    s.telones === 'Sí' ? 'Telón y escudos' : '', s.alfombra === 'Sí' ? 'Alfombra' : '', s.estrado === 'Sí' ? 'Atril' : '',
+    textoGradas(s.gradas)]
+    .concat(textosSillas(s))
+    .concat([s.bancos ? 'Bancos: ' + s.bancos.charAt(0).toLowerCase() + s.bancos.slice(1) : ''])
+    .filter(Boolean);
 }
 
 /* ───────── Maqueta del espacio en perspectiva ─────────
@@ -400,11 +423,15 @@ function mqDe(lista, lugar) {
   const gradas = lista.reduce(function (a, s) {
     return a || (s.gradas === 'Madera' ? 'madera' : s.gradas === 'Metal' ? 'metal' : s.gradas === 'Sí' ? 'si' : '');
   }, '');
-  let sillas = null;
+  // Sillas: para el público, para docentes y directivos, o las dos (los números se suman entre pedidos)
+  const sillas = { publico: null, docentes: null };
+  const sumar = function (k, n) { sillas[k] = (sillas[k] || 0) + (Number(n) || 0); };
   lista.forEach(function (s) {
     if (!s.sillas || s.sillas === 'No') return;
-    const tipo = s.sillas === 'Docentes y directivos' ? 'docentes' : 'publico';
-    if (!sillas || tipo === 'publico') sillas = { tipo: tipo, n: Number(s.cantidadSillas) || 0 };
+    if (s.sillas === 'Docentes y directivos') return sumar('docentes', s.cantidadSillas);
+    if (s.sillas === 'Público') return sumar('publico', s.cantidadSillas);
+    if (Number(s.cantidadSillas) || !Number(s.sillasDocentes)) sumar('publico', s.cantidadSillas);
+    if (Number(s.sillasDocentes)) sumar('docentes', s.sillasDocentes);
   });
   const teles = { fijas: false, movil: false };
   lista.forEach(function (s) {
@@ -517,7 +544,7 @@ function maquetaSVG(m) {
       fondo.push(pared(178, 462, 76, '#e5484d') + pl);
       fondo.push('<polygon points="' + pts([P(176, 0, 80), P(464, 0, 80), P(464, 0, 66), P(176, 0, 66)]) + '" fill="#b42318"/>');
       fondo.push(texto(320, 0, 73, 'Telón', 'b-blanco b-mini'));
-      desc.push('telón');
+      desc.push('telón y escudos');
     }
     if (m.teles.fijas) {
       [[104, 160], [484, 540]].forEach(function (r) {
@@ -581,29 +608,31 @@ function maquetaSVG(m) {
       caras.push([1001, '<rect x="' + (q[0] - w / 2).toFixed(1) + '" y="' + (q[1] - 12).toFixed(1) + '" width="' + w.toFixed(1) + '" height="24" rx="12" fill="#ffffff" fill-opacity=".92" stroke="#cfcac0" stroke-width="1"/>' +
         '<text x="' + q[0].toFixed(1) + '" y="' + q[1].toFixed(1) + '" class="b-t b-mini" text-anchor="middle" dominant-baseline="central">' + t + '</text>']);
     };
-    const n = m.sillas && m.sillas.n ? m.sillas.n + ' sillas' : 'Sillas';
-    if (m.sillas && m.sillas.tipo === 'publico') {
-      for (let f = 0; f < 7; f++) for (let c = 0; c < 10; c++) {
-        [118, 346].forEach(function (x0) { silla(x0 + 5 + c * 19, 192 + f * 24, 0, 0, -1); });
+    const conDocentes = m.sillas && m.sillas.docentes != null;
+    const cuantas = function (n) { return n ? n + ' sillas' : 'Sillas'; };
+    if (m.sillas && m.sillas.publico != null) {
+      // Público frente al escenario; si también hay sillas de docentes, los bloques se corren a la izquierda.
+      const bloques = conDocentes ? [100, 290] : [118, 346], cols = conDocentes ? 8 : 10;
+      for (let f = 0; f < 7; f++) for (let c = 0; c < cols; c++) {
+        bloques.forEach(function (x0) { silla(x0 + 5 + c * 19, 192 + f * 24, 0, 0, -1); });
       }
-      cartel(320, 268, n);
-      desc.push(n.toLowerCase() + ' para el público');
+      cartel(conDocentes ? 266 : 320, 268, cuantas(m.sillas.publico));
+      desc.push(cuantas(m.sillas.publico).toLowerCase() + ' para el público');
     } else {
-      const docentes = m.sillas && m.sillas.tipo === 'docentes';
-      const cx = docentes ? 280 : 320, rx = docentes ? 180 : 220;
+      const cx = conDocentes ? 280 : 320, rx = conDocentes ? 180 : 220;
       fondo.push('<ellipse cx="' + P(cx, 270, 0)[0] + '" cy="' + P(cx, 270, 0)[1] + '" rx="' + (rx * (0.84 + 0.16 * 270 / 450)) + '" ry="' + (92 * K) + '" fill="rgba(20,20,20,.04)" stroke="#a19e94" stroke-width="2" stroke-dasharray="8 7"/>');
       fondo.push(texto(cx, 270, 0, 'Público', 'b-suave'));
-      if (docentes) {
-        // Lateral derecho: filas largas en diagonal, mirando al escenario
-        const a = Math.atan2(90 - 270, 330 - 535), fx = Math.cos(a), fy = Math.sin(a);
-        const rxv = -fy, ryv = fx, ang = Math.atan2(ryv, rxv) * 180 / Math.PI;
-        for (let j = 0; j < 6; j++) for (let i = 0; i < 5; i++) {
-          const k = (i - 2) * 17, b = j * 19;
-          silla(492 + rxv * k - fx * b, 222 + ryv * k - fy * b, ang, fx, fy);
-        }
-        cartel(520, 338, n);
-        desc.push(n.toLowerCase() + ' para docentes y directivos');
+    }
+    if (conDocentes) {
+      // Lateral derecho: filas cortas en diagonal, mirando al escenario
+      const a = Math.atan2(90 - 270, 330 - 535), fx = Math.cos(a), fy = Math.sin(a);
+      const rxv = -fy, ryv = fx, ang = Math.atan2(ryv, rxv) * 180 / Math.PI;
+      for (let j = 0; j < 6; j++) for (let i = 0; i < 5; i++) {
+        const k = (i - 2) * 17, b = j * 19;
+        silla(492 + rxv * k - fx * b, 222 + ryv * k - fy * b, ang, fx, fy);
       }
+      cartel(520, 338, cuantas(m.sillas.docentes));
+      desc.push(cuantas(m.sillas.docentes).toLowerCase() + ' para docentes y directivos');
     }
     if (m.gradas) {
       const madera = m.gradas === 'madera';
@@ -755,9 +784,11 @@ function vistaForm() {
   const ext = cfg.extensiones.map(function (x) { return '.' + x; }).join(',');
   const titulo = function (n) { return '<h2 tabindex="-1">' + PASOS[n - 1] + '</h2>'; };
 
-  return '<div class="form-top"><div class="form-top-fila">' + volver('evento', ev.nombre) +
+  const cabecera = E.edicion ? '<span class="volver" style="cursor:default">' + esc(ev.nombre) + '</span>' : volver('evento', ev.nombre);
+  return '<div class="form-top"><div class="form-top-fila">' + cabecera +
       '<button type="button" class="btn-mq" data-accion="abrir-mq" aria-controls="mq-panel" aria-expanded="false">' + ICONOS.plano + 'Ver maqueta</button></div>' +
-      '<p class="paso-n" id="paso-n"></p><div class="progreso" aria-hidden="true">' + PASOS.map(function () { return '<i></i>'; }).join('') + '</div></div>' +
+      '<p class="paso-n" id="paso-n"></p><div class="progreso" aria-hidden="true">' + PASOS.map(function () { return '<i></i>'; }).join('') + '</div>' +
+      (E.edicion ? '<p class="editando">Editando el pedido <b>#' + esc(E.edicion.pedido.codigo) + '</b>' + (E.edicion.quien ? ' · lo edita ' + esc(E.edicion.quien) : '') + '. Los cambios se guardan al final.</p>' : '') + '</div>' +
     '<form id="form" novalidate>' +
 
     // PASO 1
@@ -770,8 +801,10 @@ function vistaForm() {
       '<div class="campo" data-campo="actividad"><label for="actividad">¿Qué van a hacer?</label>' +
         '<textarea id="actividad" maxlength="1000" placeholder="Ej.: 4.º grado canta dos canciones con guitarra, después hay lecturas y al final se proyecta un video."></textarea>' +
         '<span class="ayuda">Contanos cómo va a ser el acto: quiénes participan, si hay música en vivo, lecturas, videos, baile… Así nos hacemos una idea de qué preparar.</span></div>' +
-      tarjetas('duracion', '¿Cuánto dura el acto, más o menos?', DURACIONES.map(function (x) { return { v: x, t: x }; }), true) +
-      '<span class="ayuda" style="margin-top:-14px">De principio a fin. Con esto calculamos hasta cuándo queda armado el espacio.</span>' +
+      '<div class="campo opcional" data-campo="horario"><span class="preg-tit">Horario del acto <span class="opc">(opcional)</span></span>' +
+        '<div class="horario"><span>De</span><label class="solo-lector" for="horaDesde">Hora de inicio</label><input type="time" id="horaDesde" value="' + esc(ev.hora || '') + '">' +
+        '<span>a</span><label class="solo-lector" for="horaHasta">Hora de fin</label><input type="time" id="horaHasta"></div>' +
+        '<span class="ayuda">De principio a fin. Si todavía no lo saben, déjenlo vacío: se puede completar después.</span></div>' +
     '</section>' +
 
     // PASO 2
@@ -798,15 +831,18 @@ function vistaForm() {
         segmentado('estrado', 'Atril', ['Sí', 'No'], 'sn') +
         segmentado('sillas', 'Sillas', ['Sí', 'No'], 'sn') +
         '<div class="anidado" id="b-sillas" hidden>' +
-          '<div id="b-tipo-sillas">' + tarjetas('tipoSillas', '¿Para quién son?', [
-            { v: 'Público', t: 'Para el público', d: 'Frente al escenario' },
-            { v: 'Docentes y directivos', t: 'Para docentes y directivos', d: 'En el lateral derecho, mirando al escenario' }
-          ], true) + '</div>' +
-          '<div class="campo" data-campo="cantidadSillas"><label for="cantidadSillas">¿Cuántas sillas?</label>' +
-            '<input type="text" id="cantidadSillas" inputmode="numeric" maxlength="4" autocomplete="off" style="max-width:140px"></div>' +
+          '<div class="pregunta" data-campo="sillasPara" id="b-sillas-para"><span class="preg-tit">¿Para quién son? <span class="opc">(pueden ser las dos)</span></span>' +
+            '<div class="opciones una">' +
+              '<label class="opcion"><input type="checkbox" id="sillasPublico"><span>Para el público<small>Frente al escenario</small></span></label>' +
+              '<label class="opcion"><input type="checkbox" id="sillasDoc"><span>Para docentes y directivos<small>En el lateral derecho, mirando al escenario</small></span></label>' +
+            '</div></div>' +
+          '<div class="campo cant" data-campo="cantidadSillas" id="b-cant-pub" hidden><label for="cantidadSillas" id="l-cant-pub">¿Cuántas para el público?</label>' +
+            '<input type="text" id="cantidadSillas" inputmode="numeric" maxlength="4" autocomplete="off"></div>' +
+          '<div class="campo cant" data-campo="sillasDocentes" id="b-cant-doc" hidden><label for="cantSillasDoc">¿Cuántas para docentes y directivos?</label>' +
+            '<input type="text" id="cantSillasDoc" inputmode="numeric" maxlength="4" autocomplete="off"></div>' +
           '<div class="nota" id="nota-sillas">Las sillas se arman para eventos con familias o ceremonias, como una entrega de diplomas. En un acto común no se despliegan.</div>' +
         '</div>' +
-        segmentado('telones', 'Telones', ['Sí', 'No'], 'sn') +
+        segmentado('telones', 'Telón y escudos', ['Sí', 'No'], 'sn') +
         segmentado('alfombra', 'Alfombra', ['Sí', 'No'], 'sn') +
         segmentado('gradas', 'Gradas', ['Sí', 'No'], 'sn') +
         '<div class="anidado" id="b-gradas" hidden>' + segmentado('tipoGradas', '¿De madera o de metal?', ['Madera', 'Metal']) + '</div>' +
@@ -855,6 +891,7 @@ function vistaForm() {
           { v: 'No necesita', t: 'No vamos a usar computadora' }
         ], true) +
         '<div class="nota" id="nota-propia" hidden>Te pedimos que lleves <strong>todos los archivos ya descargados</strong> en la notebook o en un pendrive, para no depender de internet el día del acto.</div>' +
+        '<div class="nota" id="nota-edicion-archivos" hidden>Los archivos que ya se mandaron con este pedido quedan como estaban.</div>' +
         '<div id="b-archivos" hidden style="display:flex;flex-direction:column;gap:12px">' +
           '<div class="nota">Podés hacernos llegar la música, los videos o las imágenes de tres formas:<ul>' +
             '<li>Adjuntándolos acá abajo.</li>' +
@@ -896,13 +933,14 @@ function filaResumen(t, v) { return '<li><span>' + esc(t) + '</span><b>' + esc(v
 function vistaOk() {
   const r = E.resultado, d = r.datos;
   const ev = eventoActual();
-  let montaje = filaResumen('Lugar', d.lugar) + filaResumen('Duración del acto', d.duracion);
+  const horario = d.horaDesde && d.horaHasta ? d.horaDesde + ' a ' + d.horaHasta : d.horaDesde ? 'Desde ' + d.horaDesde : d.horaHasta ? 'Hasta ' + d.horaHasta : 'A definir';
+  let montaje = filaResumen('Lugar', d.lugar) + filaResumen('Horario del acto', horario);
   if (d.bancos) montaje += filaResumen('Bancos', d.bancos);
   if (!esSala(d.lugar)) montaje += filaResumen('Escenario', textoEscenario(d.escenario) || 'No');
   if (d.escenarioAdicional === 'Sí') montaje += filaResumen('Escenario adicional', 'A la ' + d.posicion.toLowerCase() + ' · ' + TARIMAS_POR_LATERAL + ' tarimas');
   if (d.estrado === 'Sí') montaje += filaResumen('Atril', 'Sí');
-  if (textoSillas(d)) montaje += filaResumen('Sillas', (d.cantidadSillas || '') + (d.sillas === 'Docentes y directivos' ? ' · docentes y directivos' : d.sillas === 'Público' ? ' · público' : ''));
-  if (d.telones === 'Sí') montaje += filaResumen('Telones', 'Sí');
+  textosSillas(d).forEach(function (t) { montaje += filaResumen('Sillas', t.replace(/^(\d+) sillas ?/, '$1 ')); });
+  if (d.telones === 'Sí') montaje += filaResumen('Telón y escudos', 'Sí');
   if (d.alfombra === 'Sí') montaje += filaResumen('Alfombra', 'Sí');
   if (textoGradas(d.gradas)) montaje += filaResumen('Gradas', d.gradas === 'Madera' ? 'De madera' : d.gradas === 'Metal' ? 'De metal' : 'Sí');
   let sonido = filaResumen('Tipo', d.sonido === 'No necesita' ? 'Sin sonido' : 'Sonido ' + d.sonido.toLowerCase());
@@ -918,15 +956,18 @@ function vistaOk() {
   const fallas = r.fallidos.length ? '<div class="falla"><strong>Estos archivos no se pudieron adjuntar:</strong><ul>' +
     r.fallidos.map(function (f) { return '<li>' + esc(f.nombre) + (f.motivo ? ' — ' + esc(f.motivo) : '') + '</li>'; }).join('') +
     '</ul>Mandánoslos por mail a ' + esc(E.cfg.emailContacto) + ' o traelos en un pendrive. El pedido sí quedó registrado.</div>' : '';
-  return '<div class="ok-cab"><h1>Pedido enviado</h1><span class="pill pill-ok">' + ICONOS.ok + 'Registrado</span></div>' +
-    '<p class="bajada">Quedó registrado para <strong>' + esc(ev ? ev.nombre : '') + '</strong>. Código de pedido: <span class="codigo">' + esc(r.codigo) + '</span></p>' +
+  const cierre = E.edicion
+    ? '<p class="bajada" style="margin-top:16px">Ya podés cerrar esta pestaña y volver al panel: el pedido se actualiza solo.</p>'
+    : '<button type="button" class="btn btn-pri" data-accion="ir" data-vista="eventos">Volver a los eventos</button>' +
+      '<button type="button" class="btn btn-sec" data-accion="otro">Hacer otro pedido para este evento</button>';
+  return '<div class="ok-cab"><h1>' + (E.edicion ? 'Cambios guardados' : 'Pedido enviado') + '</h1><span class="pill pill-ok">' + ICONOS.ok + (E.edicion ? 'Actualizado' : 'Registrado') + '</span></div>' +
+    '<p class="bajada">' + (E.edicion ? 'Pedido' : 'Quedó registrado para') + ' <strong>' + esc(ev ? ev.nombre : '') + '</strong>. Código de pedido: <span class="codigo">' + esc(r.codigo) + '</span></p>' +
     fallas +
     '<div class="maqueta" style="margin-top:16px">' + maquetaSVG(mqDe([d], d.lugar)) + '</div>' +
     '<div class="ficha"><p class="resumen-tit">Montaje</p><ul class="resumen">' + montaje + '</ul>' +
       '<p class="resumen-tit">Sonido</p><ul class="resumen">' + sonido + '</ul>' +
       '<p class="resumen-tit">Pantallas y computadora</p><ul class="resumen">' + pantallas + '</ul>' + subidos + '</div>' +
-    '<button type="button" class="btn btn-pri" data-accion="ir" data-vista="eventos">Volver a los eventos</button>' +
-    '<button type="button" class="btn btn-sec" data-accion="otro">Hacer otro pedido para este evento</button>' + pie();
+    cierre + pie();
 }
 
 function render() {
@@ -961,11 +1002,16 @@ function condicionales() {
   ver('b-tam-esc', conEsc);
   ver('b-adicional', gym);
   ver('b-posicion', gym && valor('escenarioAdicional') === 'Sí');
-  ['telones', 'alfombra', 'gradas'].forEach(function (k) { verCampo(k, !sala); });
+  ['telones', 'gradas'].forEach(function (k) { verCampo(k, !sala); });
+  verCampo('alfombra', !sala && !(conEsc && valor('tamEscenario') === 'Medio escenario'));   // con medio escenario no va alfombra
   ver('b-gradas', !sala && valor('gradas') === 'Sí');
   verCampo('sillas', !templo);
   ver('b-sillas', !templo && valor('sillas') === 'Sí');
-  ver('b-tipo-sillas', !sala);
+  const pub = document.getElementById('sillasPublico').checked, doc = document.getElementById('sillasDoc').checked;
+  ver('b-sillas-para', !sala);
+  ver('b-cant-pub', sala || pub);
+  ver('b-cant-doc', !sala && doc);
+  document.getElementById('l-cant-pub').textContent = sala ? '¿Cuántas sillas?' : '¿Cuántas para el público?';
   // En las salas no hay sonido completo ni teles
   const completo = document.querySelector('input[name="sonido"][value="Completo"]');
   if (completo) { completo.closest('label').hidden = sala; if (sala && completo.checked) completo.checked = false; }
@@ -982,8 +1028,10 @@ function condicionales() {
   const compu = valor('computadora');
   document.getElementById('b-compu').hidden = !necesitaCompu();
   document.getElementById('nota-propia').hidden = !(necesitaCompu() && compu === 'Lleva la suya');
-  document.getElementById('b-archivos').hidden = !(necesitaCompu() && compu === 'Notebook del colegio');
+  document.getElementById('b-archivos').hidden = !!E.edicion || !(necesitaCompu() && compu === 'Notebook del colegio');
+  ver('nota-edicion-archivos', !!E.edicion && necesitaCompu() && compu === 'Notebook del colegio');
   actualizarMaqueta();
+  marcarRecorrido();
 }
 function actualizarMaqueta() {
   const d = recolectar();
@@ -1007,15 +1055,45 @@ function abrirMaqueta(abrir) {
   else if (btn) btn.focus();
 }
 
+/* Recorrido del formulario: marca la próxima pregunta sin responder, aquieta lo ya respondido
+   y resalta lo que aparece nuevo hasta que se completa. */
+function marcarRecorrido() {
+  const paso = document.querySelector('.paso:not([hidden])');
+  if (!paso) return;
+  let primero = true;
+  paso.querySelectorAll('[data-campo]').forEach(function (el) {
+    if (el.offsetParent === null) { el.classList.remove('ok', 'siguiente'); return; }
+    const opcional = el.classList.contains('opcional') || (!el.querySelector('input[type=checkbox]') && !!el.querySelector('.opc'));
+    const marcas = el.querySelectorAll('input[type=radio], input[type=checkbox]');
+    let ok;
+    if (marcas.length) ok = Array.prototype.some.call(marcas, function (i) { return i.checked; });
+    else { const t = el.querySelector('input[type=text], input[type=time], textarea'); ok = !t || t.value.trim() !== ''; }
+    if (opcional) { el.classList.remove('siguiente'); el.classList.toggle('ok', ok); return; }
+    el.classList.toggle('ok', ok);
+    el.classList.toggle('siguiente', !ok && primero);
+    if (!ok) primero = false;
+  });
+  document.querySelectorAll('.anidado').forEach(function (a) {
+    if (a.hidden) { delete a.dataset.visto; a.classList.remove('falta', 'listo'); return; }
+    if (!a.dataset.visto) { a.dataset.visto = '1'; a.classList.remove('aparece'); void a.offsetWidth; a.classList.add('aparece'); }
+    const falta = Array.prototype.some.call(a.querySelectorAll('[data-campo]'), function (c) {
+      return c.offsetParent !== null && !c.classList.contains('ok') && !c.classList.contains('opcional');
+    });
+    a.classList.toggle('falta', falta);
+    a.classList.toggle('listo', !falta);
+  });
+}
+
 function irPaso(n) {
   E.paso = n;
   document.querySelectorAll('.paso').forEach(function (s) { s.hidden = +s.dataset.n !== n; });
   document.getElementById('paso-n').textContent = 'Paso ' + n + ' de ' + PASOS.length;
   document.querySelectorAll('.progreso i').forEach(function (b, i) { b.className = i < n ? 'hecho' : ''; });
   document.getElementById('atras').hidden = n === 1;
-  document.getElementById('enviar').textContent = n === PASOS.length ? 'Enviar pedido' : 'Siguiente';
+  document.getElementById('enviar').textContent = n === PASOS.length ? (E.edicion ? 'Guardar cambios' : 'Enviar pedido') : 'Siguiente';
   document.getElementById('msj').textContent = '';
   window.scrollTo(0, 0);
+  marcarRecorrido();
   const h = document.querySelector('.paso[data-n="' + n + '"] h2');
   if (h) h.focus({ preventScroll: true });
 }
@@ -1050,8 +1128,8 @@ function leerBase64(f) {
   });
 }
 
-function numeroSillas() {
-  const t = document.getElementById('cantidadSillas').value.trim();
+function numeroSillas(id) {
+  const t = document.getElementById(id || 'cantidadSillas').value.trim();
   return /^\d{1,4}$/.test(t) ? Number(t) : 0;
 }
 function recolectar() {
@@ -1060,10 +1138,10 @@ function recolectar() {
     nombre: document.getElementById('nombre').value.trim(),
     departamento: document.getElementById('depto').value.trim(),
     actividad: document.getElementById('actividad').value.trim(),
-    duracion: valor('duracion'),
+    horaDesde: document.getElementById('horaDesde').value, horaHasta: document.getElementById('horaHasta').value,
     lugar: lugar, escenario: '',
     escenarioAdicional: '', posicion: '',
-    telones: '', alfombra: '', estrado: valor('estrado'), gradas: '', sillas: '', cantidadSillas: '', bancos: '',
+    telones: '', alfombra: '', estrado: valor('estrado'), gradas: '', sillas: '', cantidadSillas: '', sillasDocentes: '', bancos: '',
     obsMontaje: document.getElementById('obsMontaje').value.trim(),
     sonido: valor('sonido'),
     inalambricos: 0, vinchas: 0, alambricos: '', cantidadAlambricos: 0, pies: 0,
@@ -1078,14 +1156,18 @@ function recolectar() {
       d.escenarioAdicional = valor('escenarioAdicional');
       if (d.escenarioAdicional === 'Sí') d.posicion = valor('posicion');
     }
-    d.telones = valor('telones'); d.alfombra = valor('alfombra');
+    d.telones = valor('telones');
+    d.alfombra = d.escenario === 'Medio escenario' ? 'No' : valor('alfombra');
     d.gradas = valor('gradas') === 'Sí' ? valor('tipoGradas') : valor('gradas');
   }
   if (templo) d.bancos = valor('bancos');
   else {
     const si = valor('sillas');
-    d.sillas = si === 'Sí' ? (sala ? 'Sí' : valor('tipoSillas')) : si;
-    if (si === 'Sí') d.cantidadSillas = numeroSillas() || '';
+    d.sillas = si;
+    if (si === 'Sí') {
+      if (sala || document.getElementById('sillasPublico').checked) d.cantidadSillas = numeroSillas() || '';
+      if (!sala && document.getElementById('sillasDoc').checked) d.sillasDocentes = numeroSillas('cantSillasDoc') || '';
+    }
   }
   if (conSonido()) {
     d.inalambricos = E.cant.inal; d.vinchas = E.cant.vinch;
@@ -1109,7 +1191,7 @@ function problemas(d, hastaPaso) {
     [1, 'nombre', d.nombre.length < 3, 'Ingresá tu nombre y apellido.'],
     [1, 'departamento', !d.departamento, 'Indicá tu departamento o área.'],
     [1, 'actividad', d.actividad.length < 10, 'Contanos brevemente de qué se trata la actividad.'],
-    [1, 'duracion', !d.duracion, 'Indicá cuánto dura el acto, más o menos.'],
+    [1, 'horario', d.horaDesde && d.horaHasta && d.horaHasta <= d.horaDesde, 'En el horario, la hora de fin tiene que ser después de la de inicio.'],
     [2, 'lugar', !d.lugar, 'Elegí dónde es.'],
     [2, 'bancos', templo && !d.bancos, 'Indicá qué hacemos con los bancos.'],
     [2, 'escenario', !sala && !valor('escenario'), 'Indicá si usan escenario.'],
@@ -1118,8 +1200,9 @@ function problemas(d, hastaPaso) {
     [2, 'posicion', gym && d.escenarioAdicional === 'Sí' && !d.posicion, 'Elegí de qué lado va el escenario adicional.'],
     [2, 'estrado', !d.estrado, 'Indicá si necesitan atril.'],
     [2, 'sillas', !templo && !valor('sillas'), 'Indicá si necesitan sillas.'],
-    [2, 'tipoSillas', sillasSi && !sala && !valor('tipoSillas'), 'Elegí para quién son las sillas.'],
-    [2, 'cantidadSillas', sillasSi && !numeroSillas(), 'Indicá cuántas sillas, con un número.'],
+    [2, 'sillasPara', sillasSi && !sala && !document.getElementById('sillasPublico').checked && !document.getElementById('sillasDoc').checked, 'Elegí para quién son las sillas.'],
+    [2, 'cantidadSillas', sillasSi && (sala || document.getElementById('sillasPublico').checked) && !numeroSillas(), 'Indicá cuántas sillas, con un número.'],
+    [2, 'sillasDocentes', sillasSi && !sala && document.getElementById('sillasDoc').checked && !numeroSillas('cantSillasDoc'), 'Indicá cuántas sillas para docentes y directivos.'],
     [2, 'telones', !sala && !d.telones, 'Indicá si necesitan telones.'],
     [2, 'alfombra', !sala && !d.alfombra, 'Indicá si necesitan alfombra.'],
     [2, 'gradas', !sala && !valor('gradas'), 'Indicá si necesitan gradas.'],
@@ -1194,7 +1277,8 @@ $main.addEventListener('change', function (e) {
 });
 $main.addEventListener('input', function (e) {
   sacarError(e.target.closest('[data-campo]'));
-  if (e.target.id === 'cantidadSillas') actualizarMaqueta();
+  if (e.target.id === 'cantidadSillas' || e.target.id === 'cantSillasDoc') actualizarMaqueta();
+  if (E.vista === 'form') marcarRecorrido();
 });
 
 $main.addEventListener('submit', function (e) {
@@ -1219,7 +1303,17 @@ $main.addEventListener('submit', function (e) {
   const atras = document.getElementById('atras');
   msj.textContent = '';
   btn.disabled = true; atras.disabled = true;
-  btn.innerHTML = '<span class="giro" aria-hidden="true"></span> Enviando…';
+  btn.innerHTML = '<span class="giro" aria-hidden="true"></span> ' + (E.edicion ? 'Guardando…' : 'Enviando…');
+  if (E.edicion) {
+    llamar('guardarEdicion', Object.assign({}, d, { ticket: E.edicion.ticket, quien: E.edicion.quien })).then(function (r) {
+      if (!r.ok) throw new Error(r.mensaje);
+      E.resultado = { codigo: E.edicion.pedido.codigo, datos: d, subidos: [], fallidos: [] }; E.vista = 'ok'; render();
+    }).catch(function (err) {
+      msj.textContent = (err && err.message) || 'No se pudo guardar.';
+      btn.disabled = false; atras.disabled = false; btn.textContent = 'Guardar cambios';
+    });
+    return;
+  }
   guardarLocal('nombre', d.nombre); guardarLocal('depto', d.departamento);
 
   const conArchivos = d.computadora === 'Notebook del colegio' ? E.archivos.slice() : [];
@@ -1286,8 +1380,8 @@ function resumenArmado(pedidos, ev) {
   if (lugares.length) filas.push(['Lugar', lugares.join(', ')]);
   if (ev && ev.armado) filas.push(['Armado', fechaHoraCorta(ev.armado)]);
   if (ev && ev.desarmado) filas.push(['Desarmado (hasta)', fechaHoraCorta(ev.desarmado)]);
-  const dur = pedidos.map(function (p) { return p.duracion; }).filter(Boolean)[0];
-  if (dur) filas.push(['Duración del acto', dur]);
+  const hor = pedidos.map(function (p) { return p.horario; }).filter(Boolean)[0];
+  if (hor) filas.push(['Horario del acto', hor]);
   const montaje = [];
   pedidos.forEach(function (p) { montajeLista(p).forEach(function (x) { if (montaje.indexOf(x) < 0) montaje.push(x); }); });
   filas.push(['Montaje', montaje.length ? montaje.join(', ') : 'Nada']);
@@ -1323,7 +1417,7 @@ function tarjetaPedidoArmado(p) {
     (p.actividad ? '<p>' + esc(p.actividad) + '</p>' : '') +
     '<dl class="datos">' +
       fila('Lugar', esc(p.lugar)) +
-      fila('Duración', esc(p.duracion)) +
+      fila('Horario del acto', esc(p.horario)) +
       fila('Montaje', montaje.length ? chips(montaje) : '<span class="ayuda">Nada</span>') +
       fila('Notas de montaje', p.obsMontaje ? '<span style="white-space:pre-line">' + esc(p.obsMontaje) + '</span>' : '') +
       fila('Sonido', esc(p.sonido === 'No necesita' ? 'No necesita' : p.sonido)) +
@@ -1393,7 +1487,7 @@ function enviarMensaje(form) {
 const DEMO_API = {
   obtenerDatosIniciales: function () {
     return {
-      version: '10',
+      version: '11',
       token: 'demo',
       config: {
         lugares: ['Gimnasio', 'Patio Primaria', 'Patio Secundaria', 'Comedor', 'Terraza', 'Patio Abierto Primaria', 'Templo', 'Casa congregacional'],
@@ -1414,9 +1508,9 @@ const DEMO_API = {
   enviarSolicitud: function () { return { ok: true, codigo: 'A1B2C3', token: 'demo', ticket: 'demo' }; },
   subirArchivo: function () { return { ok: true }; },
   obtenerArmado: function () {
-    return { version: '10', token: 'demo', emailContacto: 'actosieavdp@gmail.com', eventos: [
+    return { version: '11', token: 'demo', emailContacto: 'actosieavdp@gmail.com', eventos: [
       { id: 'e3', nombre: 'Feria de Ciencias', fecha: '2027-05-13', hora: '09:00', lugar: 'Gimnasio', descripcion: '', armado: '2027-05-12T16:00', desarmado: '2027-05-13T12:30', pedidos: [
-        { id: 'p1aa11', codigo: 'P1AA11', solicitante: 'María Gómez', departamento: 'Música', actividad: 'Coro de 2.º grado con piano.', lugar: 'Gimnasio', duracion: 'Entre 1 y 2 horas',
+        { id: 'p1aa11', codigo: 'P1AA11', solicitante: 'María Gómez', departamento: 'Música', actividad: 'Coro de 2.º grado con piano.', lugar: 'Gimnasio', horario: '09:00 a 10:30',
           escenario: 'Sí', escenarioAdicional: 'Sí', posicion: 'Izquierda', telones: 'Sí', alfombra: 'No', estrado: 'Sí', gradas: 'Sí', sillas: 'No',
           obsMontaje: 'El piano va sobre el escenario lateral.', sonido: 'Pequeño', computadora: 'Lleva la suya', teles: 'Sí', cantidadTeles: '2', mismaImagen: 'Sí',
           observaciones: '', items: [{ equipo: 'Micrófono inalámbrico', cantidad: 2 }, { equipo: 'Pie de micrófono', cantidad: 2 }],
@@ -1425,20 +1519,70 @@ const DEMO_API = {
       { id: 'e1', nombre: 'Muestra de fin de año', fecha: '2027-11-28', hora: '18:30', lugar: 'Patio Secundaria', descripcion: '', pedidos: [] }
     ] };
   },
-  agregarMensaje: function (d) { return { ok: true, mensaje: { autor: d.autor, texto: d.texto, fecha: 'ahora', origen: 'armado' } }; }
+  agregarMensaje: function (d) { return { ok: true, mensaje: { autor: d.autor, texto: d.texto, fecha: 'ahora', origen: 'armado' } }; },
+  obtenerPedidoEdicion: function () {
+    const ini = DEMO_API.obtenerDatosIniciales();
+    return { version: ini.version, config: ini.config, token: 'demo', evento: ini.eventos[0], pedido: {
+      id: 'p1', codigo: 'P1AA11', estado: 'Confirmado', nombre: 'María Gómez', departamento: 'Música', actividad: 'Coro de 2.º grado con piano.',
+      lugar: 'Gimnasio', horario: '09:00 a 10:30', escenario: 'Completo', escenarioAdicional: 'Sí', posicion: 'Izquierda', telones: 'Sí', alfombra: 'No',
+      estrado: 'Sí', gradas: 'Madera', sillas: 'Sí', cantidadSillas: '120', sillasDocentes: '30', bancos: '', obsMontaje: '', sonido: 'Pequeño',
+      teles: 'Sí', cantidadTeles: '1', mismaImagen: 'Sí', computadora: 'Lleva la suya', observaciones: '', items: { 'MIC-INAL': 2, 'PIE': 2 } } };
+  },
+  guardarEdicion: function () { return { ok: true }; }
 };
 
 if (DEMO) document.getElementById('demo').innerHTML = '<div class="demo">Vista de demostración: los pedidos no se guardan.</div>';
 
 // Con ?vista=armado al final del enlace se abre la vista del equipo de armado.
 // Con ?sitio=1 se adapta para verse dentro de Google Sites.
+/* ───────── Edición de un pedido (enlace "Editar pedido" del panel) ───────── */
+function cargarEdicion(ticket, quien) {
+  E.vista = 'cargando'; render();
+  llamar('obtenerPedidoEdicion', { ticket: ticket }).then(function (d) {
+    E.cfg = d.config; E.token = d.token; E.eventos = [d.evento]; E.eventoId = d.evento.id; revisarVersion(d.version);
+    E.edicion = { ticket: ticket, quien: quien || '', pedido: d.pedido };
+    const it = d.pedido.items || {};
+    E.cant = { inal: it['MIC-INAL'] || 0, vinch: it['VINCHA'] || 0, cable: it['MIC-CABLE'] || 1, pie: it['PIE'] || 0 };
+    E.archivos = []; E.paso = 1; E.vista = 'form'; render();
+    cargarValores(d.pedido); condicionales();
+  }).catch(function (err) { E.error = err && err.message ? err.message : ''; E.vista = 'error'; render(); });
+}
+function cargarValores(p) {
+  const marcar = function (n, v) { if (!v) return; const el = document.querySelector('input[name="' + n + '"][value="' + String(v).replace(/"/g, '\\"') + '"]'); if (el) el.checked = true; };
+  const poner = function (id, v) { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  poner('nombre', p.nombre); poner('depto', p.departamento); poner('actividad', p.actividad);
+  poner('obsMontaje', p.obsMontaje); poner('obs', p.observaciones);
+  const horas = (p.horario || '').match(/\d{2}:\d{2}/g) || [];
+  poner('horaDesde', /^hasta/.test(p.horario || '') ? '' : horas[0]); poner('horaHasta', /^hasta/.test(p.horario || '') ? horas[0] : horas[1]);
+  marcar('lugar', p.lugar);
+  if (p.escenario === 'Sí' || p.escenario === 'Completo') { marcar('escenario', 'Sí'); marcar('tamEscenario', 'Completo'); }
+  else if (p.escenario === 'Medio escenario') { marcar('escenario', 'Sí'); marcar('tamEscenario', 'Medio escenario'); }
+  else marcar('escenario', p.escenario);
+  marcar('escenarioAdicional', p.escenarioAdicional); marcar('posicion', p.posicion);
+  marcar('telones', p.telones); marcar('alfombra', p.alfombra); marcar('estrado', p.estrado); marcar('bancos', p.bancos);
+  if (p.gradas === 'Madera' || p.gradas === 'Metal') { marcar('gradas', 'Sí'); marcar('tipoGradas', p.gradas); } else marcar('gradas', p.gradas);
+  if (p.sillas && p.sillas !== 'No') {
+    marcar('sillas', 'Sí');
+    const pub = p.sillas === 'Público' || (p.sillas === 'Sí' && p.cantidadSillas);
+    const doc = p.sillas === 'Docentes y directivos' || p.sillasDocentes;
+    document.getElementById('sillasPublico').checked = !!pub; document.getElementById('sillasDoc').checked = !!doc;
+    poner('cantidadSillas', p.sillas === 'Docentes y directivos' ? '' : p.cantidadSillas);
+    poner('cantSillasDoc', p.sillas === 'Docentes y directivos' ? p.cantidadSillas : p.sillasDocentes);
+  } else marcar('sillas', p.sillas);
+  marcar('sonido', p.sonido);
+  if (p.sonido && p.sonido !== 'No necesita') marcar('alambricos', (p.items || {})['MIC-CABLE'] ? 'Sí' : 'No');
+  marcar('teles', p.teles); marcar('cantidadTeles', p.cantidadTeles); marcar('mismaImagen', p.mismaImagen);
+  marcar('computadora', p.computadora);
+}
+
 function arrancar(param) {
   if (param.sitio) document.documentElement.classList.add('en-sitio');
+  if (param.editar) { E.modo = 'edicion'; cargarEdicion(param.editar, param.quien); return; }
   E.modo = param.vista === 'armado' ? 'armado' : 'docentes';
   if (E.modo === 'armado') cargarArmado(); else cargar();
 }
 if (EN_GOOGLE) google.script.url.getLocation(function (loc) { arrancar((loc && loc.parameter) || {}); });
-else { const q = new URLSearchParams(location.search); arrancar({ vista: q.get('vista'), sitio: q.get('sitio') }); }
+else { const q = new URLSearchParams(location.search); arrancar({ vista: q.get('vista'), sitio: q.get('sitio'), editar: q.get('editar'), quien: q.get('quien') }); }
 </script>
 </body>
 </html>
