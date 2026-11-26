@@ -484,6 +484,7 @@ function maquetaSVG(m) {
   const fondo = [];
   const desc = [];
   let profundo = 450;   // hasta dónde llega el piso (para recortar el dibujo)
+  let ancho = 640;      // ancho del dibujo
 
   if (m.lugar === 'Templo') {
     /* Templo: largo y angosto, el frente al fondo y bancos en dos columnas con pasillo central */
@@ -528,15 +529,19 @@ function maquetaSVG(m) {
     }
     bloque(rect(250, 0, 140, 22), 0, 30, '#c79a62', '#a97c47', '#9c7442', cajones);
   } else {
-    /* Gimnasio (y esquema aproximado de los patios) */
+    /* Gimnasio (y esquema aproximado de los patios).
+       La pared derecha está más lejos para que entren, a la vez, las sillas del público
+       (centradas, con el pasillo frente al medio del escenario) y las de docentes en el lateral derecho. */
+    const W = 730;
+    ancho = W;
     const gym = m.lugar === 'Gimnasio';
-    fondo.push(pared(0, 640, 78, '#e7e3dc'));
-    fondo.push(plano(rect(0, 0, 640, 450), 0, gym ? '#ecdcc2' : '#e9e6df'));
-    if (gym) for (let x = 40; x < 640; x += 40) fondo.push('<line x1="' + P(x, 0, 0)[0].toFixed(1) + '" y1="' + P(x, 0, 0)[1].toFixed(1) + '" x2="' + P(x, 450, 0)[0].toFixed(1) + '" y2="' + P(x, 450, 0)[1].toFixed(1) + '" stroke="#dcc8a8" stroke-width="1"/>');
-    fondo.push(borde(0, 0, 335), borde(640, 0, 335));
+    fondo.push(pared(0, W, 78, '#e7e3dc'));
+    fondo.push(plano(rect(0, 0, W, 450), 0, gym ? '#ecdcc2' : '#e9e6df'));
+    if (gym) for (let x = 40; x < W; x += 40) fondo.push('<line x1="' + P(x, 0, 0)[0].toFixed(1) + '" y1="' + P(x, 0, 0)[1].toFixed(1) + '" x2="' + P(x, 450, 0)[0].toFixed(1) + '" y2="' + P(x, 450, 0)[1].toFixed(1) + '" stroke="#dcc8a8" stroke-width="1"/>');
+    fondo.push(borde(0, 0, 335), borde(W, 0, 335));
     fondo.push('<line x1="' + P(0, 401, 0)[0] + '" y1="' + P(0, 401, 0)[1] + '" x2="' + P(0, 450, 0)[0] + '" y2="' + P(0, 450, 0)[1] + '" stroke="#b9b3a8" stroke-width="3"/>');
-    fondo.push('<line x1="' + P(640, 401, 0)[0] + '" y1="' + P(640, 401, 0)[1] + '" x2="' + P(640, 450, 0)[0] + '" y2="' + P(640, 450, 0)[1] + '" stroke="#b9b3a8" stroke-width="3"/>');
-    fondo.push(texto(38, 368, 0, 'Entrada', 'b-mini b-suave'), texto(602, 368, 0, 'Entrada', 'b-mini b-suave'));
+    fondo.push('<line x1="' + P(W, 401, 0)[0] + '" y1="' + P(W, 401, 0)[1] + '" x2="' + P(W, 450, 0)[0] + '" y2="' + P(W, 450, 0)[1] + '" stroke="#b9b3a8" stroke-width="3"/>');
+    fondo.push(texto(38, 368, 0, 'Entrada', 'b-mini b-suave'), texto(W - 38, 368, 0, 'Entrada', 'b-mini b-suave'));
 
     if (m.telones) {
       let pl = '';
@@ -611,27 +616,26 @@ function maquetaSVG(m) {
     const conDocentes = m.sillas && m.sillas.docentes != null;
     const cuantas = function (n) { return n ? n + ' sillas' : 'Sillas'; };
     if (m.sillas && m.sillas.publico != null) {
-      // Público frente al escenario; si también hay sillas de docentes, los bloques se corren a la izquierda.
-      const bloques = conDocentes ? [100, 290] : [118, 346], cols = conDocentes ? 8 : 10;
-      for (let f = 0; f < 7; f++) for (let c = 0; c < cols; c++) {
-        bloques.forEach(function (x0) { silla(x0 + 5 + c * 19, 192 + f * 24, 0, 0, -1); });
+      // Público frente al escenario: siempre en el mismo lugar, con el pasillo frente al medio del escenario.
+      for (let f = 0; f < 7; f++) for (let c = 0; c < 10; c++) {
+        [118, 346].forEach(function (x0) { silla(x0 + 5 + c * 19, 192 + f * 24, 0, 0, -1); });
       }
-      cartel(conDocentes ? 266 : 320, 268, cuantas(m.sillas.publico));
+      cartel(320, 268, cuantas(m.sillas.publico));
       desc.push(cuantas(m.sillas.publico).toLowerCase() + ' para el público');
     } else {
-      const cx = conDocentes ? 280 : 320, rx = conDocentes ? 180 : 220;
+      const cx = 320, rx = 220;
       fondo.push('<ellipse cx="' + P(cx, 270, 0)[0] + '" cy="' + P(cx, 270, 0)[1] + '" rx="' + (rx * (0.84 + 0.16 * 270 / 450)) + '" ry="' + (92 * K) + '" fill="rgba(20,20,20,.04)" stroke="#a19e94" stroke-width="2" stroke-dasharray="8 7"/>');
       fondo.push(texto(cx, 270, 0, 'Público', 'b-suave'));
     }
     if (conDocentes) {
       // Lateral derecho: filas cortas en diagonal, mirando al escenario
-      const a = Math.atan2(90 - 270, 330 - 535), fx = Math.cos(a), fy = Math.sin(a);
+      const a = Math.atan2(90 - 280, 320 - 620), fx = Math.cos(a), fy = Math.sin(a);
       const rxv = -fy, ryv = fx, ang = Math.atan2(ryv, rxv) * 180 / Math.PI;
       for (let j = 0; j < 6; j++) for (let i = 0; i < 5; i++) {
         const k = (i - 2) * 17, b = j * 19;
-        silla(492 + rxv * k - fx * b, 222 + ryv * k - fy * b, ang, fx, fy);
+        silla(585 + rxv * k - fx * b, 240 + ryv * k - fy * b, ang, fx, fy);
       }
-      cartel(520, 338, cuantas(m.sillas.docentes));
+      cartel(584, 344, cuantas(m.sillas.docentes));
       desc.push(cuantas(m.sillas.docentes).toLowerCase() + ' para docentes y directivos');
     }
     if (m.gradas) {
@@ -654,7 +658,7 @@ function maquetaSVG(m) {
   const conocido = ['Gimnasio', 'Templo', 'Casa congregacional'].indexOf(m.lugar) >= 0;
   const etiqueta = (m.lugar || 'Espacio') + (m.lugar && !conocido ? ' · esquema aproximado' : '');
   const alto = Math.ceil(OY + profundo * K + 6);
-  return '<svg viewBox="0 ' + (OY - 80) + ' 640 ' + (alto - OY + 80) + '" role="img" aria-label="Maqueta: ' + esc(etiqueta) + (desc.length ? ', con ' + esc(desc.join(', ')) : '') + '">' +
+  return '<svg viewBox="0 ' + (OY - 80) + ' ' + ancho + ' ' + (alto - OY + 80) + '" role="img" aria-label="Maqueta: ' + esc(etiqueta) + (desc.length ? ', con ' + esc(desc.join(', ')) : '') + '">' +
     fondo.join('') + caras.map(function (c) { return c[1]; }).join('') + '</svg>' +
     '<p class="mq-pie">' + esc(etiqueta) + ' · vista desde el fondo</p>';
 }
